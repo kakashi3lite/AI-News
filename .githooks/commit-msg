@@ -1,0 +1,252 @@
+#!/bin/sh
+#
+# Commit message hook for AI News Dashboard
+# Validates commit messages against Conventional Commits specification
+#
+# To install: 
+# chmod +x .githooks/commit-msg
+# git config core.hooksPath .githooks
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+print_success() {
+    echo "${GREEN}✓ $1${NC}"
+}
+
+print_warning() {
+    echo "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo "${RED}✗ $1${NC}"
+}
+
+print_info() {
+    echo "${BLUE}ℹ $1${NC}"
+}
+
+# Get the commit message file
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Remove comments and empty lines for validation
+CLEAN_MSG=$(echo "$COMMIT_MSG" | grep -v '^#' | grep -v '^$' | head -1)
+
+if [ -z "$CLEAN_MSG" ]; then
+    print_error "Empty commit message"
+    exit 1
+fi
+
+print_info "Validating commit message: $CLEAN_MSG"
+
+# Conventional Commits regex pattern
+# Format: type(scope): description
+# type: feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
+# scope: optional, can contain letters, numbers, hyphens, underscores
+# description: required, starts with lowercase letter
+CONVENTIONAL_PATTERN='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([a-zA-Z0-9_-]+\))?: [a-z].{1,}$'
+
+# Check if message matches conventional commits format
+if echo "$CLEAN_MSG" | grep -qE "$CONVENTIONAL_PATTERN"; then
+    print_success "Commit message follows Conventional Commits format"
+else
+    print_error "Commit message does not follow Conventional Commits format"
+    echo ""
+    print_info "Expected format: type(scope): description"
+    echo ""
+    print_info "Valid types:"
+    echo "  feat:     A new feature"
+    echo "  fix:      A bug fix"
+    echo "  docs:     Documentation only changes"
+    echo "  style:    Changes that do not affect the meaning of the code"
+    echo "  refactor: A code change that neither fixes a bug nor adds a feature"
+    echo "  perf:     A code change that improves performance"
+    echo "  test:     Adding missing tests or correcting existing tests"
+    echo "  chore:    Changes to the build process or auxiliary tools"
+    echo "  ci:       Changes to CI configuration files and scripts"
+    echo "  build:    Changes that affect the build system or external dependencies"
+    echo "  revert:   Reverts a previous commit"
+    echo ""
+    print_info "Examples:"
+    echo "  feat(search): add voice search support"
+    echo "  fix(api): handle rate limiting in news fetcher"
+    echo "  docs(readme): update installation instructions"
+    echo "  style(ui): improve button hover animations"
+    echo "  refactor(auth): simplify token validation logic"
+    echo "  perf(search): optimize query performance"
+    echo "  test(api): add integration tests for news endpoints"
+    echo "  chore(deps): update React to v18.2.0"
+    echo ""
+    print_info "Your message: $CLEAN_MSG"
+    exit 1
+fi
+
+# Extract components
+TYPE=$(echo "$CLEAN_MSG" | sed -n 's/^\([^(]*\).*/\1/p')
+SCOPE=$(echo "$CLEAN_MSG" | sed -n 's/^[^(]*\(([^)]*)\).*/\1/p' | tr -d '()')
+DESCRIPTION=$(echo "$CLEAN_MSG" | sed -n 's/^[^:]*: \(.*\)/\1/p')
+
+# Validate subject line length (recommended max 50 characters)
+SUBJECT_LENGTH=${#CLEAN_MSG}
+if [ $SUBJECT_LENGTH -gt 50 ]; then
+    print_warning "Subject line is $SUBJECT_LENGTH characters (recommended max: 50)"
+    print_info "Consider shortening: $CLEAN_MSG"
+fi
+
+# Check if description starts with lowercase
+FIRST_CHAR=$(echo "$DESCRIPTION" | cut -c1)
+if echo "$FIRST_CHAR" | grep -q '[A-Z]'; then
+    print_warning "Description should start with lowercase letter"
+    print_info "Current: $DESCRIPTION"
+fi
+
+# Check if description ends with period
+if echo "$DESCRIPTION" | grep -q '\.$'; then
+    print_warning "Description should not end with a period"
+    print_info "Current: $DESCRIPTION"
+fi
+
+# Validate scope if present
+if [ -n "$SCOPE" ]; then
+    # Define valid scopes for the project
+    VALID_SCOPES="search ai social api ui auth db config deps security perf a11y i18n mobile desktop analytics monitoring blockchain ml cache queue webhook email sms payment admin cli docker k8s aws gcp azure"
+    
+    SCOPE_VALID=false
+    for valid_scope in $VALID_SCOPES; do
+        if [ "$SCOPE" = "$valid_scope" ]; then
+            SCOPE_VALID=true
+            break
+        fi
+    done
+    
+    if [ "$SCOPE_VALID" = true ]; then
+        print_success "Valid scope: $SCOPE"
+    else
+        print_warning "Scope '$SCOPE' is not in the predefined list"
+        print_info "Valid scopes: $VALID_SCOPES"
+        print_info "You can still proceed, but consider using a standard scope"
+    fi
+fi
+
+# Check for common anti-patterns
+if echo "$CLEAN_MSG" | grep -qi "^fix.*typo"; then
+    print_warning "Consider using 'docs' type for typo fixes in documentation"
+elif echo "$CLEAN_MSG" | grep -qi "^update.*readme"; then
+    print_warning "Consider using 'docs' type for README updates"
+elif echo "$CLEAN_MSG" | grep -qi "^add.*test"; then
+    print_warning "Consider using 'test' type for adding tests"
+elif echo "$CLEAN_MSG" | grep -qi "^remove\|^delete"; then
+    print_info "Consider if this should be a 'refactor' or specific type"
+fi
+
+# Check for issue references
+if echo "$COMMIT_MSG" | grep -q "#[0-9]\+"; then
+    print_success "Issue reference found"
+else
+    print_info "Consider referencing related issues (e.g., 'Fixes #123')"
+fi
+
+# Check for breaking changes
+if echo "$COMMIT_MSG" | grep -qi "BREAKING CHANGE"; then
+    print_warning "Breaking change detected - ensure this triggers a major version bump"
+    
+    # Validate breaking change format
+    if echo "$COMMIT_MSG" | grep -q "BREAKING CHANGE: "; then
+        print_success "Breaking change properly formatted"
+    else
+        print_error "Breaking change should be formatted as 'BREAKING CHANGE: description'"
+        exit 1
+    fi
+fi
+
+# Check for co-authors
+if echo "$COMMIT_MSG" | grep -q "Co-authored-by:"; then
+    print_success "Co-author attribution found"
+    
+    # Validate co-author format
+    if echo "$COMMIT_MSG" | grep -q "Co-authored-by: .* <.*@.*>"; then
+        print_success "Co-author properly formatted"
+    else
+        print_warning "Co-author should be formatted as 'Co-authored-by: Name <email@example.com>'"
+    fi
+fi
+
+# Check for security-related commits
+if echo "$CLEAN_MSG" | grep -qi "security\|vulnerability\|cve\|xss\|csrf\|injection"; then
+    print_warning "Security-related commit detected"
+    print_info "Consider adding 'Security:' prefix in footer for security fixes"
+    print_info "Example: Security: Fixes XSS vulnerability in search input"
+fi
+
+# Check for dependency updates
+if echo "$CLEAN_MSG" | grep -qi "update.*dependen\|bump.*version\|upgrade"; then
+    if [ "$TYPE" != "chore" ]; then
+        print_warning "Dependency updates should typically use 'chore' type"
+    fi
+fi
+
+# Check for WIP commits
+if echo "$CLEAN_MSG" | grep -qi "wip\|work in progress\|todo\|fixme"; then
+    print_warning "This appears to be a work-in-progress commit"
+    print_info "Consider squashing WIP commits before merging"
+fi
+
+# Validate body format if present
+BODY_LINES=$(echo "$COMMIT_MSG" | grep -v '^#' | tail -n +3 | grep -v '^$' | wc -l)
+if [ $BODY_LINES -gt 0 ]; then
+    print_info "Commit body found ($BODY_LINES lines)"
+    
+    # Check for proper line wrapping in body (72 characters)
+    LONG_LINES=$(echo "$COMMIT_MSG" | grep -v '^#' | tail -n +3 | awk 'length > 72' | wc -l)
+    if [ $LONG_LINES -gt 0 ]; then
+        print_warning "$LONG_LINES line(s) in body exceed 72 characters"
+        print_info "Consider wrapping long lines for better readability"
+    fi
+fi
+
+# Check for merge commit
+if echo "$CLEAN_MSG" | grep -q "^Merge "; then
+    print_info "Merge commit detected - validation skipped"
+    exit 0
+fi
+
+# Check for revert commit
+if echo "$CLEAN_MSG" | grep -q "^Revert "; then
+    if [ "$TYPE" = "revert" ]; then
+        print_success "Revert commit properly typed"
+    else
+        print_warning "Revert commits should use 'revert' type"
+    fi
+fi
+
+# Final validation summary
+print_success "Commit message validation completed"
+
+# Provide helpful tips
+echo ""
+print_info "Commit details:"
+echo "  Type: $TYPE"
+if [ -n "$SCOPE" ]; then
+    echo "  Scope: $SCOPE"
+fi
+echo "  Description: $DESCRIPTION"
+echo "  Length: $SUBJECT_LENGTH characters"
+
+echo ""
+print_info "Tips for better commits:"
+echo "  - Keep the subject line under 50 characters"
+echo "  - Use the body to explain what and why, not how"
+echo "  - Reference issues when applicable (Fixes #123)"
+echo "  - Include breaking change notices when needed"
+echo "  - Use imperative mood (\"add feature\" not \"added feature\")"
+
+exit 0

@@ -1,0 +1,206 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+
+# --- COMMIT MESSAGE TEMPLATE ---
+# Please follow the Conventional Commits specification:
+# https://www.conventionalcommits.org/
+#
+# Format:
+# <type>(<scope>): <subject>
+# 
+# [optional body]
+# 
+# [optional footer(s)]
+#
+# --- TYPE ---
+# Must be one of the following:
+# feat:     A new feature
+# fix:      A bug fix
+# docs:     Documentation only changes
+# style:    Changes that do not affect the meaning of the code
+# refactor: A code change that neither fixes a bug nor adds a feature
+# perf:     A code change that improves performance
+# test:     Adding missing tests or correcting existing tests
+# chore:    Changes to the build process or auxiliary tools
+# ci:       Changes to CI configuration files and scripts
+# build:    Changes that affect the build system or external dependencies
+# revert:   Reverts a previous commit
+#
+# --- SCOPE ---
+# Optional, but recommended. Examples:
+# search:   Arc-style search functionality
+# ai:       AI skill orchestrator and context features
+# social:   Social features (recommendations, sharing)
+# api:      API endpoints and backend services
+# ui:       User interface components
+# auth:     Authentication and authorization
+# db:       Database related changes
+# config:   Configuration changes
+# deps:     Dependency updates
+# security: Security related changes
+# perf:     Performance improvements
+# a11y:     Accessibility improvements
+# i18n:     Internationalization
+# mobile:   Mobile-specific changes
+# desktop:  Desktop-specific changes
+# analytics: Analytics and tracking
+# monitoring: Monitoring and observability
+# blockchain: Blockchain verification system
+# ml:       Machine learning components
+# cache:    Caching mechanisms
+# queue:    Queue and background job processing
+# webhook:  Webhook handling
+# email:    Email functionality
+# sms:      SMS functionality
+# payment:  Payment processing
+# admin:    Admin panel functionality
+# cli:      Command line interface
+# docker:   Docker and containerization
+# k8s:      Kubernetes deployment
+# aws:      AWS specific changes
+# gcp:      Google Cloud Platform changes
+# azure:    Azure specific changes
+#
+# --- SUBJECT ---
+# - Use imperative mood ("add" not "added" or "adds")
+# - Don't capitalize first letter
+# - No period at the end
+# - Limit to 50 characters
+# - Be concise but descriptive
+#
+# Examples:
+# feat(search): add voice search support
+# fix(api): handle rate limiting in news fetcher
+# docs(readme): update installation instructions
+# style(ui): improve button hover animations
+# refactor(auth): simplify token validation logic
+# perf(search): optimize query performance
+# test(api): add integration tests for news endpoints
+# chore(deps): update React to v18.2.0
+#
+# --- BODY ---
+# Optional. Use to explain what and why vs. how.
+# Wrap at 72 characters.
+# Can include multiple paragraphs.
+#
+# Examples:
+# - Explain the motivation for the change
+# - Contrast with previous behavior
+# - Include implementation details if complex
+# - Reference related issues or discussions
+#
+# --- FOOTER ---
+# Optional. Used for:
+# - Breaking changes: BREAKING CHANGE: <description>
+# - Issue references: Fixes #123, Closes #456
+# - Co-authors: Co-authored-by: Name <email>
+# - Reviewers: Reviewed-by: Name <email>
+# - Security advisories: Security: CVE-2024-XXXX
+#
+# Examples:
+# Fixes #123
+# Closes #456, #789
+# BREAKING CHANGE: API endpoint structure changed
+# Co-authored-by: John Doe <john@example.com>
+# Reviewed-by: Jane Smith <jane@example.com>
+# Security: Fixes XSS vulnerability in search input
+#
+# --- BREAKING CHANGES ---
+# If your commit introduces breaking changes, include:
+# BREAKING CHANGE: <description>
+# 
+# This will trigger a major version bump in semantic versioning.
+#
+# --- EXAMPLES ---
+#
+# Simple feature:
+# feat(search): add voice search button
+#
+# Bug fix with details:
+# fix(api): handle rate limiting in news fetcher
+# 
+# The news API was returning 429 errors when making too many
+# requests. Added exponential backoff retry logic and request
+# queuing to handle rate limits gracefully.
+# 
+# Fixes #123
+#
+# Breaking change:
+# feat(api): redesign authentication endpoints
+# 
+# Simplified the authentication flow by combining login and
+# registration endpoints. This provides better user experience
+# and reduces API complexity.
+# 
+# BREAKING CHANGE: /auth/login and /auth/register endpoints
+# have been replaced with /auth/authenticate
+# 
+# Closes #456
+# Reviewed-by: Security Team <security@company.com>
+#
+# Documentation update:
+# docs(api): add examples for news verification endpoints
+# 
+# Added comprehensive examples showing how to use the blockchain
+# verification system for news articles, including request/response
+# formats and error handling.
+#
+# Security fix:
+# fix(security): sanitize user input in search component
+# 
+# Added input validation and sanitization to prevent XSS
+# attacks through the search interface. All user input is now
+# properly escaped before rendering.
+# 
+# Security: Fixes potential XSS vulnerability
+# Fixes #789
+#
+# Performance improvement:
+# perf(context): optimize prediction algorithm
+# 
+# Improved the context prediction algorithm performance by:
+# - Implementing result caching
+# - Reducing API calls by 60%
+# - Using more efficient data structures
+# 
+# Benchmark results show 3x faster response times.
+#
+# Dependency update:
+# chore(deps): update security dependencies
+# 
+# Updated all dependencies with known security vulnerabilities:
+# - lodash: 4.17.20 -> 4.17.21
+# - axios: 0.21.1 -> 0.21.4
+# - express: 4.17.1 -> 4.18.2
+# 
+# Security: Addresses CVE-2021-23337, CVE-2021-3749
+#
+# --- TIPS ---
+# 1. Keep the subject line under 50 characters
+# 2. Use the body to explain what and why, not how
+# 3. Reference issues and pull requests when relevant
+# 4. Use conventional commit types for consistency
+# 5. Include breaking change notices when applicable
+# 6. Write in imperative mood ("fix bug" not "fixed bug")
+# 7. Don't end the subject line with a period
+# 8. Separate subject from body with a blank line
+# 9. Wrap the body at 72 characters
+# 10. Use the footer for metadata (issues, co-authors, etc.)
+#
+# --- CONFIGURATION ---
+# To use this template, run:
+# git config commit.template .gitmessage
+#
+# To use globally:
+# git config --global commit.template ~/.gitmessage
+#
+# --- AUTOMATION ---
+# Consider using commitizen for interactive commit creation:
+# npm install -g commitizen
+# npm install -g cz-conventional-changelog
+# echo '{"path": "cz-conventional-changelog"}' > ~/.czrc
+# 
+# Then use: git cz instead of git commit
