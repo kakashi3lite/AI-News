@@ -1,0 +1,595 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-news-dashboard
+  labels:
+    name: ai-news-dashboard
+    environment: production
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-news-config
+  namespace: ai-news-dashboard
+data:
+  REDIS_URL: "redis://redis-service:6379"
+  POSTGRES_URL: "postgresql://postgres:password@postgres-service:5432/newsdb"
+  MONGODB_URL: "mongodb://mongo-service:27017/newsdb"
+  MLFLOW_TRACKING_URI: "http://mlflow-service:5000"
+  PROMETHEUS_GATEWAY: "http://prometheus-service:9090"
+  NODE_ENV: "production"
+  LOG_LEVEL: "INFO"
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-news-secrets
+  namespace: ai-news-dashboard
+type: Opaque
+data:
+  postgres-password: cGFzc3dvcmQ=  # base64 encoded 'password'
+  mongo-password: cGFzc3dvcmQ=     # base64 encoded 'password'
+  redis-password: ""               # empty for no auth
+  openai-api-key: ""              # add your OpenAI API key
+  jwt-secret: c2VjcmV0a2V5         # base64 encoded 'secretkey'
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ai-news-dashboard:frontend
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: ai-news-config
+              key: NODE_ENV
+        - name: NEXT_PUBLIC_API_URL
+          value: "http://api-service:8000"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+# API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: ai-news-dashboard:api
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: ai-news-config
+        - secretRef:
+            name: ai-news-secrets
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-storage
+          mountPath: /home/mlops/models
+        - name: log-storage
+          mountPath: /home/mlops/logs
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage-pvc
+      - name: log-storage
+        persistentVolumeClaim:
+          claimName: log-storage-pvc
+      nodeSelector:
+        accelerator: nvidia-tesla-v100
+---
+# NLP Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nlp-service-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: nlp-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nlp-service
+  template:
+    metadata:
+      labels:
+        app: nlp-service
+    spec:
+      containers:
+      - name: nlp-service
+        image: ai-news-dashboard:nlp
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: ai-news-config
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "1500m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "6Gi"
+            cpu: "3000m"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-storage
+          mountPath: /home/mlops/models
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage-pvc
+      nodeSelector:
+        accelerator: nvidia-tesla-v100
+---
+# Computer Vision Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cv-service-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: cv-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cv-service
+  template:
+    metadata:
+      labels:
+        app: cv-service
+    spec:
+      containers:
+      - name: cv-service
+        image: ai-news-dashboard:cv
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: ai-news-config
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-storage
+          mountPath: /home/mlops/models
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 180
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 90
+          periodSeconds: 10
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: model-storage-pvc
+      nodeSelector:
+        accelerator: nvidia-tesla-v100
+---
+# Monitoring Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitoring
+  template:
+    metadata:
+      labels:
+        app: monitoring
+    spec:
+      containers:
+      - name: monitoring
+        image: ai-news-dashboard:monitoring
+        ports:
+        - containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: ai-news-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: log-storage
+          mountPath: /home/mlops/logs
+      volumes:
+      - name: log-storage
+        persistentVolumeClaim:
+          claimName: log-storage-pvc
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        command: ["redis-server", "--appendonly", "yes"]
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-storage-pvc
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "newsdb"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-news-secrets
+              key: postgres-password
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-storage-pvc
+---
+# MongoDB Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "admin"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-news-secrets
+              key: mongo-password
+        - name: MONGO_INITDB_DATABASE
+          value: "newsdb"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-storage
+        persistentVolumeClaim:
+          claimName: mongo-storage-pvc
+---
+# MLflow Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+      - name: mlflow
+        image: python:3.10-slim
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MLFLOW_BACKEND_STORE_URI
+          value: "postgresql://postgres:password@postgres-service:5432/mlflow"
+        - name: MLFLOW_DEFAULT_ARTIFACT_ROOT
+          value: "/mlflow/artifacts"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: mlflow-storage
+          mountPath: /mlflow
+        command:
+        - /bin/bash
+        - -c
+        - |
+          pip install mlflow psycopg2-binary boto3
+          mlflow server --host 0.0.0.0 --port 5000 \
+            --backend-store-uri postgresql://postgres:password@postgres-service:5432/mlflow \
+            --default-artifact-root /mlflow/artifacts
+      volumes:
+      - name: mlflow-storage
+        persistentVolumeClaim:
+          claimName: mlflow-storage-pvc
+---
+# Prometheus Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        ports:
+        - containerPort: 9090
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--storage.tsdb.retention.time=200h'
+        - '--web.enable-lifecycle'
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-storage-pvc
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment
+  namespace: ai-news-dashboard
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        - name: GF_INSTALL_PLUGINS
+          value: "grafana-piechart-panel"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: grafana-dashboards
+          mountPath: /var/lib/grafana/dashboards
+        - name: grafana-provisioning
+          mountPath: /etc/grafana/provisioning
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-storage-pvc
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards
+      - name: grafana-provisioning
+        configMap:
+          name: grafana-provisioning

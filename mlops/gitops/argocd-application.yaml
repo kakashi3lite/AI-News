@@ -1,0 +1,286 @@
+# Commander DeployX's AI-Driven GitOps Application Configuration
+# Superhuman Deployment Strategy with Autonomous Multi-Cloud Orchestration
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-news-dashboard
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: ai-news-dashboard
+    deployment.strategy: commander-deployx
+    chaos.engineering: enabled
+    canary.analysis: ai-enhanced
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/ai-news-dashboard
+    targetRevision: HEAD
+    path: mlops/kubernetes
+    helm:
+      valueFiles:
+      - values-production.yaml
+      - values-canary.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-news-dashboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas
+  - group: argoproj.io
+    kind: Rollout
+    jsonPointers:
+    - /spec/replicas
+---
+# AI-Enhanced Canary Rollout Configuration
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: ai-news-canary-rollout
+  namespace: ai-news-dashboard
+  labels:
+    deployment.strategy: ai-canary
+    commander.deployx: enabled
+spec:
+  replicas: 10
+  strategy:
+    canary:
+      maxSurge: "25%"
+      maxUnavailable: 0
+      analysis:
+        templates:
+        - templateName: success-rate
+        - templateName: latency-p99
+        - templateName: error-rate
+        - templateName: ai-anomaly-detection
+        startingStep: 2
+        args:
+        - name: service-name
+          value: api-service
+        - name: prometheus-server
+          value: http://prometheus-service:9090
+      steps:
+      - setWeight: 5
+      - pause:
+          duration: 30s
+      - setWeight: 10
+      - pause:
+          duration: 60s
+      - analysis:
+          templates:
+          - templateName: ai-anomaly-detection
+          args:
+          - name: service-name
+            value: api-service
+      - setWeight: 20
+      - pause:
+          duration: 120s
+      - setWeight: 40
+      - pause:
+          duration: 300s
+      - setWeight: 60
+      - pause:
+          duration: 300s
+      - setWeight: 80
+      - pause:
+          duration: 300s
+      - setWeight: 100
+      trafficRouting:
+        istio:
+          virtualService:
+            name: ai-news-vsvc
+            routes:
+            - primary
+          destinationRule:
+            name: ai-news-destrule
+            canarySubsetName: canary
+            stableSubsetName: stable
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        version: canary
+    spec:
+      containers:
+      - name: api
+        image: ai-news-dashboard:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DEPLOYMENT_TYPE
+          value: "canary"
+        - name: CHAOS_MONKEY_ENABLED
+          value: "true"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+# AI Anomaly Detection Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: ai-anomaly-detection
+  namespace: ai-news-dashboard
+spec:
+  args:
+  - name: service-name
+  - name: prometheus-server
+    value: http://prometheus-service:9090
+  metrics:
+  - name: ai-anomaly-score
+    interval: 30s
+    count: 10
+    successCondition: result < 0.8
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: "{{args.prometheus-server}}"
+        query: |
+          ai_anomaly_detection_score{
+            service="{{args.service-name}}",
+            deployment="canary"
+          }
+  - name: ml-model-accuracy
+    interval: 60s
+    count: 5
+    successCondition: result > 0.85
+    failureLimit: 2
+    provider:
+      prometheus:
+        address: "{{args.prometheus-server}}"
+        query: |
+          ml_model_accuracy{
+            service="{{args.service-name}}",
+            deployment="canary"
+          }
+  - name: chaos-resilience-score
+    interval: 120s
+    count: 3
+    successCondition: result > 0.9
+    failureLimit: 1
+    provider:
+      prometheus:
+        address: "{{args.prometheus-server}}"
+        query: |
+          chaos_resilience_score{
+            service="{{args.service-name}}",
+            deployment="canary"
+          }
+---
+# Success Rate Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: ai-news-dashboard
+spec:
+  args:
+  - name: service-name
+  - name: prometheus-server
+  metrics:
+  - name: success-rate
+    interval: 30s
+    count: 5
+    successCondition: result > 0.95
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: "{{args.prometheus-server}}"
+        query: |
+          sum(rate(http_requests_total{
+            service="{{args.service-name}}",
+            status!~"5.."
+          }[5m])) /
+          sum(rate(http_requests_total{
+            service="{{args.service-name}}"
+          }[5m]))
+---
+# Latency P99 Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: latency-p99
+  namespace: ai-news-dashboard
+spec:
+  args:
+  - name: service-name
+  - name: prometheus-server
+  metrics:
+  - name: latency-p99
+    interval: 30s
+    count: 5
+    successCondition: result < 500
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: "{{args.prometheus-server}}"
+        query: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{
+              service="{{args.service-name}}"
+            }[5m])) by (le)
+          ) * 1000
+---
+# Error Rate Analysis Template
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: error-rate
+  namespace: ai-news-dashboard
+spec:
+  args:
+  - name: service-name
+  - name: prometheus-server
+  metrics:
+  - name: error-rate
+    interval: 30s
+    count: 5
+    successCondition: result < 0.05
+    failureLimit: 3
+    provider:
+      prometheus:
+        address: "{{args.prometheus-server}}"
+        query: |
+          sum(rate(http_requests_total{
+            service="{{args.service-name}}",
+            status=~"5.."
+          }[5m])) /
+          sum(rate(http_requests_total{
+            service="{{args.service-name}}"
+          }[5m]))

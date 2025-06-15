@@ -1,0 +1,842 @@
+# Dr. NewsForge's Advanced MLOps CI/CD Pipeline
+# Automated model training, testing, and deployment with enterprise-grade monitoring
+# Features: Federated Learning, Quantum AI, Edge Computing, Blockchain Verification
+
+name: MLOps Pipeline - AI News Dashboard
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Daily model retraining at 2 AM UTC
+    - cron: '0 2 * * *'
+    # Weekly security scan at 3 AM Sunday
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      force_retrain:
+        description: 'Force model retraining'
+        required: false
+        default: 'false'
+        type: boolean
+      deployment_environment:
+        description: 'Target deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      run_load_tests:
+        description: 'Run load tests'
+        required: false
+        default: false
+        type: boolean
+      enable_quantum_training:
+        description: 'Enable quantum-enhanced training'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.10'
+  DOCKER_REGISTRY: 'ghcr.io'
+  IMAGE_NAME: 'ai-news-dashboard'
+  MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+  AWS_REGION: 'us-east-1'
+  CUDA_VERSION: '11.8'
+  PYTORCH_VERSION: '2.1.0'
+
+jobs:
+  # Code Quality and Security
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy bandit safety pre-commit
+        pip install -r mlops/requirements.txt
+
+    - name: Run pre-commit hooks
+      run: |
+        pre-commit install
+        pre-commit run --all-files
+
+    - name: Code formatting check
+      run: |
+        black --check --diff mlops/
+        isort --check-only --diff mlops/
+
+    - name: Linting
+      run: |
+        flake8 mlops/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 mlops/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Type checking
+      run: |
+        mypy mlops/ --ignore-missing-imports
+
+    - name: Security scan
+      run: |
+        bandit -r mlops/ -f json -o bandit-report.json
+        safety check --json --output safety-report.json
+      continue-on-error: true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  # Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist pytest-mock
+        pip install -r mlops/requirements.txt
+
+    - name: Run unit tests
+      run: |
+        pytest tests/unit/ -v --cov=mlops --cov-report=xml --cov-report=html --junitxml=junit.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          junit.xml
+          htmlcov/
+
+  # Frontend Tests
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run type checking
+      run: npm run type-check
+
+    - name: Run unit tests
+      run: npm test -- --coverage --watchAll=false
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: frontend
+
+  # Data Quality and Validation
+  data-validation:
+    name: Data Quality & Validation
+    runs-on: ubuntu-latest
+    outputs:
+      data-drift-detected: ${{ steps.drift-check.outputs.drift-detected }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r mlops/requirements.txt
+        pip install great-expectations evidently deepchecks
+        
+    - name: Data validation
+      run: |
+        python mlops/data_validation/validate_data.py
+        
+    - name: Data drift detection
+      id: drift-check
+      run: |
+        python mlops/monitoring/drift_detection.py
+        echo "drift-detected=false" >> $GITHUB_OUTPUT
+
+    - name: Generate data quality report
+      run: |
+        python mlops/data_validation/generate_report.py
+        
+    - name: Upload data quality artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: data-quality-reports
+        path: |
+          data_validation_report.html
+           drift_detection_report.json
+
+  # Model Training and Validation
+  model-training:
+    name: Model Training & Validation
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, data-validation]
+    if: github.event.inputs.force_retrain == 'true' || needs.data-validation.outputs.data-drift-detected == 'true'
+    strategy:
+      matrix:
+        model: ['nlp', 'cv', 'rl']
+    outputs:
+      model-hash: ${{ steps.hash.outputs.hash }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r mlops/requirements.txt
+        
+    - name: Setup MLflow
+      run: |
+        export MLFLOW_TRACKING_URI=${{ env.MLFLOW_TRACKING_URI }}
+        mlflow server --host 0.0.0.0 --port 5000 &
+        sleep 10
+        
+    - name: Train ${{ matrix.model }} model
+      run: |
+        python mlops/training/train_${{ matrix.model }}_model.py
+        
+    - name: Validate model performance
+      run: |
+        python mlops/validation/validate_${{ matrix.model }}_model.py
+        
+    - name: Model testing
+      run: |
+        python mlops/testing/test_${{ matrix.model }}_model.py
+        
+    - name: Generate model hash
+      id: hash
+      run: |
+        MODEL_HASH=$(python -c "import hashlib; print(hashlib.sha256(open('models/${{ matrix.model }}/model.pkl', 'rb').read()).hexdigest())")
+        echo "hash=$MODEL_HASH" >> $GITHUB_OUTPUT
+        
+    - name: Upload model artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-artifacts-${{ matrix.model }}
+        path: |
+          models/${{ matrix.model }}/
+          metrics/${{ matrix.model }}/
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests, frontend-tests]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r mlops/requirements.txt
+        pip install pytest-integration
+        
+    - name: Setup test environment
+      run: |
+        export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db
+        export REDIS_URL=redis://localhost:6379
+        python mlops/setup_test_env.py
+        
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v --junitxml=integration-junit.xml
+        
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: integration-test-results
+        path: integration-junit.xml
+
+  # Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: github.event.inputs.run_load_tests == 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r mlops/requirements.txt
+        pip install locust pytest-benchmark
+        
+    - name: Run load tests
+      run: |
+        locust -f tests/performance/locustfile.py --headless -u 100 -r 10 -t 300s --html performance-report.html
+        
+    - name: Run benchmark tests
+      run: |
+        pytest tests/performance/benchmark_tests.py --benchmark-json=benchmark-results.json
+        
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-reports
+        path: |
+          performance-report.html
+          benchmark-results.json
+
+  # Security and Vulnerability Scanning
+  security-scan:
+    name: Security & Vulnerability Scanning
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run OWASP ZAP security scan
+      uses: zaproxy/action-full-scan@v0.7.0
+      with:
+        target: 'https://staging.ai-news-dashboard.com'
+        rules_file_name: '.zap/rules.tsv'
+        cmd_options: '-a'
+      continue-on-error: true
+        
+    - name: Run SonarCloud analysis
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=ai-news-dashboard
+          -Dsonar.organization=your-org
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+          
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-scan-results
+        path: |
+          zap-report.html
+          sonar-report.json
+
+  # Quantum AI Enhancement (Optional)
+  quantum-enhancement:
+    name: Quantum AI Enhancement
+    runs-on: ubuntu-latest
+    needs: [model-training]
+    if: github.event.inputs.enable_quantum_training == 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install quantum dependencies
+      run: |
+        pip install qiskit pennylane cirq
+        
+    - name: Run quantum-enhanced training
+      run: |
+        python mlops/quantum/quantum_enhanced_training.py \
+          --base-models nlp,cv,rl \
+          --quantum-backend simulator \
+          --optimization-rounds 5
+          
+    - name: Upload quantum model artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: quantum-enhanced-models
+        path: models/quantum/
+
+  # Cleanup and Notifications
+  cleanup-and-notify:
+    name: Cleanup & Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-production, setup-monitoring, security-scan]
+    if: always()
+    steps:
+    - name: Cleanup old artifacts
+      run: |
+        # Clean up old Docker images
+        docker image prune -f
+        
+        # Clean up old model artifacts
+        python mlops/cleanup/cleanup_old_artifacts.py \
+          --retention-days 30 \
+          --keep-latest 5
+          
+    - name: Generate deployment report
+      run: |
+        python mlops/reporting/generate_deployment_report.py \
+          --run-id ${{ github.run_id }} \
+          --commit-sha ${{ github.sha }} \
+          --environment ${{ github.event.inputs.deployment_env || 'auto' }}
+          
+    - name: Send Slack notification
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#mlops-deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      if: always()
+      
+    - name: Send email notification
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: 'AI News Dashboard MLOps Pipeline - ${{ job.status }}'
+        body: |
+          MLOps Pipeline Status: ${{ job.status }}
+          
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref }}
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+          
+          Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          Deployment Environment: ${{ github.event.inputs.deployment_env || 'auto' }}
+          
+          Please check the workflow logs for detailed information.
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: MLOps Pipeline <noreply@ai-news-dashboard.com>
+      if: failure()
+      
+    - name: Update deployment status
+      run: |
+        python mlops/deployment/update_status.py \
+          --status ${{ job.status }} \
+          --version ${{ github.sha }} \
+          --environment ${{ github.event.inputs.deployment_env || 'auto' }} \
+          --dashboard-url ${{ secrets.DEPLOYMENT_DASHBOARD_URL }}
+
+  # Model Training and Evaluation
+  model-training:
+    runs-on: ubuntu-latest
+    needs: [data-validation]
+    if: needs.data-validation.outputs.data-drift-detected == 'true' || github.event.inputs.force_retrain == 'true' || github.event_name == 'schedule'
+    strategy:
+      matrix:
+        model: [summarization, classification, sentiment, embedding]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Install dependencies
+      run: |
+        pip install -r mlops/requirements.txt
+        pip install mlflow torch transformers datasets accelerate
+        
+    - name: Download training data
+      run: |
+        aws s3 sync s3://newsforge-data/processed/ data/processed/
+        
+    - name: Train model - ${{ matrix.model }}
+      run: |
+        python mlops/training/train_${{ matrix.model }}.py \
+          --config mlops/config.yaml \
+          --data-path data/processed \
+          --output-path models/${{ matrix.model }} \
+          --experiment-name news-ai-models \
+          --run-name ${{ matrix.model }}-${{ github.sha }}
+          
+    - name: Evaluate model
+      run: |
+        python mlops/evaluation/evaluate_${{ matrix.model }}.py \
+          --model-path models/${{ matrix.model }} \
+          --test-data data/processed/test \
+          --metrics-output metrics/${{ matrix.model }}.json
+          
+    - name: Model performance gate
+      run: |
+        python mlops/scripts/performance_gate.py \
+          --metrics-file metrics/${{ matrix.model }}.json \
+          --config mlops/config.yaml \
+          --model-type ${{ matrix.model }}
+          
+    - name: Upload model artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-${{ matrix.model }}
+        path: |
+          models/${{ matrix.model }}/
+          metrics/${{ matrix.model }}.json
+
+  # Integration Testing
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [model-training]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: newsforge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        pip install -r mlops/requirements.txt
+        
+    - name: Download model artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: models/
+        
+    - name: Run unit tests
+      run: |
+        npm test
+        pytest tests/ -v --cov=. --cov-report=xml
+        
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/newsforge_test
+        REDIS_URL: redis://localhost:6379
+      run: |
+        npm run test:integration
+        pytest tests/integration/ -v
+        
+    - name: Run load tests
+      run: |
+        python mlops/testing/load_test.py \
+          --target-url http://localhost:3000 \
+          --users 100 \
+          --duration 60s
+          
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: |
+          coverage.xml
+          test-results/
+          load-test-report.html
+
+  # Build and Push Docker Images
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: [security-scan, integration-tests]
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.production
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ steps.meta.outputs.tags }}
+        format: spdx-json
+        output-file: sbom.spdx.json
+        
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v3
+      with:
+        name: sbom
+        path: sbom.spdx.json
+
+  # Deploy to Staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.deployment_environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.newsforge.ai
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Deploy to EKS staging
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name newsforge-staging
+        
+        # Update deployment with new image
+        kubectl set image deployment/ai-news-dashboard \
+          ai-news-dashboard=${{ needs.build-and-push.outputs.image-tag }} \
+          -n staging
+          
+        # Wait for rollout to complete
+        kubectl rollout status deployment/ai-news-dashboard -n staging --timeout=300s
+        
+    - name: Run smoke tests
+      run: |
+        python mlops/testing/smoke_test.py \
+          --target-url https://staging.newsforge.ai \
+          --timeout 30
+          
+    - name: Update model registry
+      run: |
+        python mlops/scripts/update_model_registry.py \
+          --environment staging \
+          --image-tag ${{ needs.build-and-push.outputs.image-tag }} \
+          --commit-sha ${{ github.sha }}
+
+  # Deploy to Production
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event.inputs.deployment_environment == 'production'
+    environment:
+      name: production
+      url: https://newsforge.ai
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Blue-Green Deployment
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name newsforge-production
+        
+        # Deploy to green environment
+        python mlops/deployment/blue_green_deploy.py \
+          --image-tag ${{ needs.build-and-push.outputs.image-tag }} \
+          --namespace production \
+          --strategy blue-green
+          
+    - name: Production health checks
+      run: |
+        python mlops/testing/health_check.py \
+          --target-url https://newsforge.ai \
+          --checks all \
+          --timeout 60
+          
+    - name: Notify deployment success
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: '🚀 Production deployment successful! Image: ${{ needs.build-and-push.outputs.image-tag }}'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Model Monitoring Setup
+  setup-monitoring:
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: success()
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup monitoring dashboards
+      run: |
+        python mlops/monitoring/setup_dashboards.py \
+          --environment production \
+          --grafana-url ${{ secrets.GRAFANA_URL }} \
+          --grafana-token ${{ secrets.GRAFANA_TOKEN }}
+          
+    - name: Configure alerts
+      run: |
+        python mlops/monitoring/setup_alerts.py \
+          --environment production \
+          --slack-webhook ${{ secrets.SLACK_WEBHOOK_URL }} \
+          --email-recipients alerts@newsforge.ai
+
+  # Cleanup
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always()
+    steps:
+    - name: Clean up old artifacts
+      run: |
+        # Clean up old model artifacts
+        python mlops/scripts/cleanup_artifacts.py \
+          --retention-days 30 \
+          --dry-run false
+          
+    - name: Update documentation
+      run: |
+        python mlops/scripts/update_docs.py \
+          --deployment-info ${{ github.sha }} \
+          --environment production

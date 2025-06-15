@@ -1,0 +1,407 @@
+# Commander DeployX's Chaos-Driven Resilience Engineering
+# Continuous Chaos Experiments with AI-Enhanced Recovery Validation
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: litmus
+  labels:
+    name: litmus
+    chaos.engineering: commander-deployx
+---
+# Chaos Operator RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: litmus-admin
+  namespace: litmus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: litmus-admin
+rules:
+- apiGroups: [""]
+  resources: ["pods", "events", "configmaps", "secrets", "services"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "replicasets", "statefulsets"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["litmuschaos.io"]
+  resources: ["chaosengines", "chaosexperiments", "chaosresults"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: litmus-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: litmus-admin
+subjects:
+- kind: ServiceAccount
+  name: litmus-admin
+  namespace: litmus
+---
+# Pod Delete Chaos Experiment
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: pod-delete
+  namespace: ai-news-dashboard
+  labels:
+    name: pod-delete
+    app.kubernetes.io/part-of: litmus
+    app.kubernetes.io/component: chaosexperiment
+    app.kubernetes.io/version: latest
+spec:
+  definition:
+    scope: Namespaced
+    permissions:
+      - apiGroups: [""]
+        resources: ["pods"]
+        verbs: ["create", "delete", "get", "list", "patch", "update", "deletecollection"]
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["create", "get", "list", "patch", "update"]
+      - apiGroups: [""]
+        resources: ["configmaps"]
+        verbs: ["get", "list"]
+      - apiGroups: [""]
+        resources: ["pods/log"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["pods/exec"]
+        verbs: ["get", "list", "create"]
+      - apiGroups: ["apps"]
+        resources: ["deployments", "statefulsets", "replicasets", "daemonsets"]
+        verbs: ["list", "get"]
+      - apiGroups: ["apps"]
+        resources: ["deployments/status", "statefulsets/status", "replicasets/status", "daemonsets/status"]
+        verbs: ["get"]
+      - apiGroups: ["litmuschaos.io"]
+        resources: ["chaosengines", "chaosexperiments", "chaosresults"]
+        verbs: ["create", "list", "get", "patch", "update", "delete"]
+    image: "litmuschaos/go-runner:latest"
+    imagePullPolicy: Always
+    args:
+    - -c
+    - ./experiments -name pod-delete
+    command:
+    - /bin/bash
+    env:
+    - name: TOTAL_CHAOS_DURATION
+      value: '15'
+    - name: CHAOS_INTERVAL
+      value: '5'
+    - name: FORCE
+      value: 'false'
+    - name: PODS_AFFECTED_PERC
+      value: ''
+    labels:
+      name: pod-delete
+      app.kubernetes.io/part-of: litmus
+      app.kubernetes.io/component: experiment-job
+      app.kubernetes.io/version: latest
+---
+# Network Latency Chaos Experiment
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: pod-network-latency
+  namespace: ai-news-dashboard
+  labels:
+    name: pod-network-latency
+    app.kubernetes.io/part-of: litmus
+    app.kubernetes.io/component: chaosexperiment
+spec:
+  definition:
+    scope: Namespaced
+    permissions:
+      - apiGroups: [""]
+        resources: ["pods"]
+        verbs: ["create", "delete", "get", "list", "patch", "update", "deletecollection"]
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["create", "get", "list", "patch", "update"]
+      - apiGroups: [""]
+        resources: ["configmaps"]
+        verbs: ["get", "list"]
+      - apiGroups: [""]
+        resources: ["pods/log"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["pods/exec"]
+        verbs: ["get", "list", "create"]
+      - apiGroups: ["litmuschaos.io"]
+        resources: ["chaosengines", "chaosexperiments", "chaosresults"]
+        verbs: ["create", "list", "get", "patch", "update", "delete"]
+    image: "litmuschaos/go-runner:latest"
+    imagePullPolicy: Always
+    args:
+    - -c
+    - ./experiments -name pod-network-latency
+    command:
+    - /bin/bash
+    env:
+    - name: TOTAL_CHAOS_DURATION
+      value: '60'
+    - name: NETWORK_LATENCY
+      value: '2000'
+    - name: JITTER
+      value: '0'
+    - name: CONTAINER_RUNTIME
+      value: 'containerd'
+    - name: SOCKET_PATH
+      value: '/run/containerd/containerd.sock'
+    labels:
+      name: pod-network-latency
+      app.kubernetes.io/part-of: litmus
+      app.kubernetes.io/component: experiment-job
+---
+# CPU Stress Chaos Experiment
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosExperiment
+metadata:
+  name: pod-cpu-hog
+  namespace: ai-news-dashboard
+  labels:
+    name: pod-cpu-hog
+    app.kubernetes.io/part-of: litmus
+    app.kubernetes.io/component: chaosexperiment
+spec:
+  definition:
+    scope: Namespaced
+    permissions:
+      - apiGroups: [""]
+        resources: ["pods"]
+        verbs: ["create", "delete", "get", "list", "patch", "update", "deletecollection"]
+      - apiGroups: [""]
+        resources: ["events"]
+        verbs: ["create", "get", "list", "patch", "update"]
+      - apiGroups: [""]
+        resources: ["configmaps"]
+        verbs: ["get", "list"]
+      - apiGroups: [""]
+        resources: ["pods/log"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["pods/exec"]
+        verbs: ["get", "list", "create"]
+      - apiGroups: ["litmuschaos.io"]
+        resources: ["chaosengines", "chaosexperiments", "chaosresults"]
+        verbs: ["create", "list", "get", "patch", "update", "delete"]
+    image: "litmuschaos/go-runner:latest"
+    imagePullPolicy: Always
+    args:
+    - -c
+    - ./experiments -name pod-cpu-hog
+    command:
+    - /bin/bash
+    env:
+    - name: TOTAL_CHAOS_DURATION
+      value: '60'
+    - name: CPU_CORES
+      value: '1'
+    - name: CONTAINER_RUNTIME
+      value: 'containerd'
+    - name: SOCKET_PATH
+      value: '/run/containerd/containerd.sock'
+    labels:
+      name: pod-cpu-hog
+      app.kubernetes.io/part-of: litmus
+      app.kubernetes.io/component: experiment-job
+---
+# AI News Dashboard Chaos Engine
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: ai-news-chaos-engine
+  namespace: ai-news-dashboard
+  labels:
+    context: ai-news-chaos
+    commander.deployx: enabled
+spec:
+  appinfo:
+    appns: 'ai-news-dashboard'
+    applabel: 'app=api'
+    appkind: 'deployment'
+  # Chaos Service Account
+  chaosServiceAccount: litmus-admin
+  # Monitoring
+  monitoring: true
+  # Job Cleanup Policy
+  jobCleanUpPolicy: 'retain'
+  # Annotate Application
+  annotationCheck: 'true'
+  # Chaos Experiments
+  experiments:
+  - name: pod-delete
+    spec:
+      components:
+        env:
+        # Set chaos duration (in sec)
+        - name: TOTAL_CHAOS_DURATION
+          value: '30'
+        # Set chaos interval (in sec)
+        - name: CHAOS_INTERVAL
+          value: '10'
+        # Pod affected percentage
+        - name: PODS_AFFECTED_PERC
+          value: '50'
+        # Provide the kill count
+        - name: KILL_COUNT
+          value: ''
+        - name: FORCE
+          value: 'false'
+      probe:
+      - name: "api-health-check"
+        type: "httpProbe"
+        mode: "Continuous"
+        runProperties:
+          probeTimeout: 10
+          retry: 3
+          interval: 5
+          probePollingInterval: 2
+        httpProbe/inputs:
+          url: "http://api-service:8000/health"
+          insecureSkipTLS: false
+          method:
+            get:
+              criteria: =="200"
+              responseTimeout: 5
+      - name: "prometheus-check"
+        type: "promProbe"
+        mode: "Edge"
+        runProperties:
+          probeTimeout: 5
+          retry: 3
+          interval: 5
+        promProbe/inputs:
+          endpoint: "http://prometheus-service:9090"
+          query: "up{job='api-service'}"
+          comparator:
+            type: "int"
+            criteria: ">="
+            value: "1"
+  - name: pod-network-latency
+    spec:
+      components:
+        env:
+        - name: TOTAL_CHAOS_DURATION
+          value: '60'
+        - name: NETWORK_LATENCY
+          value: '2000'
+        - name: CONTAINER_RUNTIME
+          value: 'containerd'
+        - name: SOCKET_PATH
+          value: '/run/containerd/containerd.sock'
+      probe:
+      - name: "latency-check"
+        type: "httpProbe"
+        mode: "Continuous"
+        runProperties:
+          probeTimeout: 15
+          retry: 3
+          interval: 10
+        httpProbe/inputs:
+          url: "http://api-service:8000/health"
+          insecureSkipTLS: false
+          method:
+            get:
+              criteria: =="200"
+              responseTimeout: 10
+  - name: pod-cpu-hog
+    spec:
+      components:
+        env:
+        - name: TOTAL_CHAOS_DURATION
+          value: '60'
+        - name: CPU_CORES
+          value: '2'
+        - name: CONTAINER_RUNTIME
+          value: 'containerd'
+        - name: SOCKET_PATH
+          value: '/run/containerd/containerd.sock'
+      probe:
+      - name: "cpu-performance-check"
+        type: "promProbe"
+        mode: "Continuous"
+        runProperties:
+          probeTimeout: 10
+          retry: 3
+          interval: 15
+        promProbe/inputs:
+          endpoint: "http://prometheus-service:9090"
+          query: "rate(container_cpu_usage_seconds_total{pod=~'api-deployment.*'}[5m])"
+          comparator:
+            type: "float"
+            criteria: "<"
+            value: "0.8"
+---
+# Chaos Scheduler for Continuous Testing
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: chaos-scheduler
+  namespace: ai-news-dashboard
+  labels:
+    chaos.engineering: commander-deployx
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: litmus-admin
+          containers:
+          - name: chaos-runner
+            image: litmuschaos/litmus-checker:latest
+            command:
+            - sh
+            - -c
+            - |
+              echo "Starting scheduled chaos experiments..."
+              kubectl apply -f /chaos-configs/chaos-engine.yaml
+              echo "Chaos experiments initiated successfully"
+            volumeMounts:
+            - name: chaos-config
+              mountPath: /chaos-configs
+          volumes:
+          - name: chaos-config
+            configMap:
+              name: chaos-config
+          restartPolicy: OnFailure
+---
+# Chaos Configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chaos-config
+  namespace: ai-news-dashboard
+data:
+  chaos-engine.yaml: |
+    apiVersion: litmuschaos.io/v1alpha1
+    kind: ChaosEngine
+    metadata:
+      name: scheduled-chaos
+      namespace: ai-news-dashboard
+    spec:
+      appinfo:
+        appns: 'ai-news-dashboard'
+        applabel: 'app=api'
+        appkind: 'deployment'
+      chaosServiceAccount: litmus-admin
+      monitoring: true
+      jobCleanUpPolicy: 'delete'
+      experiments:
+      - name: pod-delete
+        spec:
+          components:
+            env:
+            - name: TOTAL_CHAOS_DURATION
+              value: '15'
+            - name: CHAOS_INTERVAL
+              value: '5'
+            - name: FORCE
+              value: 'false'

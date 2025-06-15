@@ -1,0 +1,453 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AI News Dashboard - MLOps Monitoring",
+    "tags": ["mlops", "ai", "news", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Model Health Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ml_model_accuracy",
+            "legendFormat": "{{model_name}} Accuracy",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.7
+                },
+                {
+                  "color": "green",
+                  "value": 0.85
+                }
+              ]
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Prediction Latency Distribution",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(ml_prediction_latency_seconds_bucket[5m]))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(ml_prediction_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(ml_prediction_latency_seconds_bucket[5m]))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Prediction Volume",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ml_predictions_total[5m])",
+            "legendFormat": "{{model_name}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Predictions/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Data Drift Detection",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "ml_model_drift_score",
+            "legendFormat": "{{model_name}} - {{feature}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.1
+                },
+                {
+                  "color": "red",
+                  "value": 0.2
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 5,
+        "title": "System Resources",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "system_cpu_usage_percent",
+            "legendFormat": "CPU Usage %",
+            "refId": "A"
+          },
+          {
+            "expr": "system_memory_usage_bytes / 1024 / 1024 / 1024",
+            "legendFormat": "Memory Usage GB",
+            "refId": "B"
+          },
+          {
+            "expr": "system_gpu_usage_percent",
+            "legendFormat": "GPU {{gpu_id}} Usage %",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Usage %",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "News Processing Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(news_articles_processed_total[5m])",
+            "legendFormat": "{{source}} - {{category}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Articles/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 7,
+        "title": "Summarization Quality",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(summarization_quality_score_bucket[5m]))",
+            "legendFormat": "P50 Quality",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(summarization_quality_score_bucket[5m]))",
+            "legendFormat": "P95 Quality",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        }
+      },
+      {
+        "id": 8,
+        "title": "User Engagement",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "rate(user_engagement_total[1h])",
+            "legendFormat": "{{event_type}} - {{feature}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 32
+        }
+      },
+      {
+        "id": 9,
+        "title": "Error Rate Trends",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ml_predictions_total{status=\"error\"}[5m]) / rate(ml_predictions_total[5m])",
+            "legendFormat": "{{model_name}} Error Rate",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Rate",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.05],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Rate Alert",
+          "noDataState": "no_data",
+          "notifications": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 32
+        }
+      },
+      {
+        "id": 10,
+        "title": "Model Performance Comparison",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "ml_model_accuracy",
+            "legendFormat": "Accuracy",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(ml_prediction_latency_seconds_bucket[5m]))",
+            "legendFormat": "P95 Latency",
+            "refId": "B",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "rate(ml_predictions_total[5m])",
+            "legendFormat": "Throughput",
+            "refId": "C",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true
+              },
+              "indexByName": {
+                "model_name": 0,
+                "Value #A": 1,
+                "Value #B": 2,
+                "Value #C": 3
+              },
+              "renameByName": {
+                "Value #A": "Accuracy",
+                "Value #B": "P95 Latency (s)",
+                "Value #C": "Throughput (req/s)",
+                "model_name": "Model"
+              }
+            }
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 40
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "model",
+          "type": "query",
+          "query": "label_values(ml_model_accuracy, model_name)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "interval",
+          "type": "interval",
+          "query": "1m,5m,10m,30m,1h,6h,12h,1d,7d,14d,30d",
+          "current": {
+            "text": "5m",
+            "value": "5m"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Model Deployments",
+          "datasource": "prometheus",
+          "expr": "changes(ml_model_accuracy[1h]) > 0",
+          "titleFormat": "Model {{model_name}} Updated",
+          "textFormat": "New accuracy: {{value}}",
+          "iconColor": "blue"
+        },
+        {
+          "name": "Drift Alerts",
+          "datasource": "prometheus",
+          "expr": "ml_model_drift_score > 0.1",
+          "titleFormat": "Data Drift Alert",
+          "textFormat": "{{model_name}} - {{feature}}: {{value}}",
+          "iconColor": "red"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": [
+      {
+        "title": "MLflow Experiments",
+        "url": "http://localhost:5000",
+        "type": "link",
+        "icon": "external link"
+      },
+      {
+        "title": "Model Documentation",
+        "url": "/docs/models",
+        "type": "link",
+        "icon": "doc"
+      }
+    ]
+  },
+  "overwrite": true
+}
