@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+
+# Next.js build output
+.next/
+
+# Static export
+out/
+
+# Local environment variables
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+
+# MacOS
+.DS_Store

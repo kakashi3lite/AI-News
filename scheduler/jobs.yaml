@@ -1,0 +1,456 @@
+# Dr. NewsForge's Automated Job Scheduler Configuration
+# Defines scheduled tasks for news ingestion, theme extraction, and analytics
+
+version: "1.0"
+scheduler:
+  name: "NewsForge Analytics Scheduler"
+  timezone: "UTC"
+  max_concurrent_jobs: 5
+  retry_policy:
+    max_retries: 3
+    retry_delay: "5m"
+    exponential_backoff: true
+
+# Job Definitions
+jobs:
+  # Hourly Theme Extraction (Main Job)
+  theme_extraction:
+    name: "Hourly Top Themes Extraction"
+    description: "Analyze top 100 articles every hour to extract trending themes and sentiment patterns"
+    schedule: "0 * * * *"  # Every hour at minute 0
+    enabled: true
+    priority: "high"
+    timeout: "15m"
+    
+    command:
+      type: "node"
+      script: "analytics/themes.js"
+      args:
+        - "--mode=scheduled"
+        - "--max-articles=100"
+        - "--output-dir=./analytics/output"
+    
+    dependencies:
+      - "news_ingestion"
+    
+    notifications:
+      on_success:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/theme-extraction-success"
+      on_failure:
+        - type: "email"
+          recipients: ["admin@newsforge.ai"]
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/theme-extraction-failure"
+    
+    metrics:
+      - name: "themes_extracted"
+        type: "gauge"
+      - name: "processing_time_ms"
+        type: "histogram"
+      - name: "articles_processed"
+        type: "counter"
+
+  # News Ingestion (Every 30 minutes)
+  news_ingestion:
+    name: "News Articles Ingestion"
+    description: "Fetch and process news articles from RSS feeds and APIs"
+    schedule: "*/30 * * * *"  # Every 30 minutes
+    enabled: true
+    priority: "medium"
+    timeout: "10m"
+    
+    command:
+      type: "node"
+      script: "news/ingest.js"
+      args:
+        - "--mode=scheduled"
+        - "--sources=all"
+        - "--max-articles=200"
+    
+    notifications:
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/ingestion-failure"
+    
+    metrics:
+      - name: "articles_ingested"
+        type: "counter"
+      - name: "sources_processed"
+        type: "gauge"
+      - name: "ingestion_errors"
+        type: "counter"
+
+  # Daily Theme Summary Report
+  daily_theme_report:
+    name: "Daily Theme Summary Report"
+    description: "Generate comprehensive daily report of theme trends and insights"
+    schedule: "0 6 * * *"  # Daily at 6 AM UTC
+    enabled: true
+    priority: "medium"
+    timeout: "20m"
+    
+    command:
+      type: "node"
+      script: "analytics/daily_report.js"
+      args:
+        - "--period=24h"
+        - "--format=json,html"
+        - "--email-report=true"
+    
+    dependencies:
+      - "theme_extraction"
+    
+    notifications:
+      on_success:
+        - type: "email"
+          recipients: ["reports@newsforge.ai"]
+          subject: "Daily Theme Analysis Report"
+      on_failure:
+        - type: "email"
+          recipients: ["admin@newsforge.ai"]
+
+  # Weekly Trend Analysis
+  weekly_trend_analysis:
+    name: "Weekly Trend Analysis"
+    description: "Deep analysis of weekly trends and pattern recognition"
+    schedule: "0 8 * * 1"  # Monday at 8 AM UTC
+    enabled: true
+    priority: "low"
+    timeout: "30m"
+    
+    command:
+      type: "node"
+      script: "analytics/weekly_analysis.js"
+      args:
+        - "--period=7d"
+        - "--include-predictions=true"
+    
+    dependencies:
+      - "theme_extraction"
+    
+    notifications:
+      on_success:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/weekly-analysis-complete"
+
+  # Cache Cleanup (Daily)
+  cache_cleanup:
+    name: "Cache Cleanup"
+    description: "Clean up expired cache files and optimize storage"
+    schedule: "0 2 * * *"  # Daily at 2 AM UTC
+    enabled: true
+    priority: "low"
+    timeout: "5m"
+    
+    command:
+      type: "node"
+      script: "scripts/cache_cleanup.js"
+      args:
+        - "--max-age=7d"
+        - "--dry-run=false"
+    
+    metrics:
+      - name: "cache_files_cleaned"
+        type: "counter"
+      - name: "storage_freed_mb"
+        type: "gauge"
+
+  # Health Check (Every 5 minutes)
+  health_check:
+    name: "System Health Check"
+    description: "Monitor system health and service availability"
+    schedule: "*/5 * * * *"  # Every 5 minutes
+    enabled: true
+    priority: "high"
+    timeout: "2m"
+    
+    command:
+      type: "node"
+      script: "monitoring/health_check.js"
+      args:
+        - "--check-all-services=true"
+        - "--alert-threshold=3"
+    
+    notifications:
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/health-check-failure"
+          immediate: true
+    
+    metrics:
+      - name: "service_availability"
+        type: "gauge"
+      - name: "response_time_ms"
+        type: "histogram"
+
+  # Sentiment Analysis Update (Every 2 hours)
+  sentiment_analysis:
+    name: "Sentiment Analysis Update"
+    description: "Update sentiment analysis for recent articles and themes"
+    schedule: "0 */2 * * *"  # Every 2 hours
+    enabled: true
+    priority: "medium"
+    timeout: "10m"
+    
+    command:
+      type: "node"
+      script: "analytics/sentiment_update.js"
+      args:
+        - "--lookback=2h"
+        - "--update-themes=true"
+    
+    dependencies:
+      - "news_ingestion"
+    
+    metrics:
+      - name: "sentiment_scores_updated"
+        type: "counter"
+      - name: "sentiment_processing_time"
+        type: "histogram"
+
+# Environment-specific configurations
+environments:
+  development:
+    jobs:
+      theme_extraction:
+        schedule: "*/15 * * * *"  # Every 15 minutes for testing
+        timeout: "5m"
+      news_ingestion:
+        schedule: "*/10 * * * *"  # Every 10 minutes for testing
+      health_check:
+        schedule: "*/2 * * * *"  # Every 2 minutes for testing
+  
+  production:
+    jobs:
+      theme_extraction:
+        schedule: "0 * * * *"  # Every hour
+        timeout: "15m"
+        max_retries: 5
+      news_ingestion:
+        schedule: "*/30 * * * *"  # Every 30 minutes
+        timeout: "10m"
+      health_check:
+        schedule: "*/5 * * * *"  # Every 5 minutes
+
+  staging:
+    jobs:
+      theme_extraction:
+        schedule: "0 */2 * * *"  # Every 2 hours
+      news_ingestion:
+        schedule: "0 * * * *"  # Every hour
+      daily_theme_report:
+        enabled: false  # Disable reports in staging
+      weekly_trend_analysis:
+        enabled: false
+
+# Notification channels
+notifications:
+  email:
+    smtp_host: "${SMTP_HOST}"
+    smtp_port: 587
+    smtp_user: "${SMTP_USER}"
+    smtp_password: "${SMTP_PASSWORD}"
+    from_address: "noreply@newsforge.ai"
+  
+  webhook:
+    default_timeout: "10s"
+    retry_count: 3
+    headers:
+      "Content-Type": "application/json"
+      "Authorization": "Bearer ${WEBHOOK_TOKEN}"
+  
+  slack:
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channel: "#newsforge-alerts"
+    username: "NewsForge Bot"
+
+# Monitoring and observability
+monitoring:
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    port: 9090
+    
+  logging:
+    level: "info"
+    format: "json"
+    output: "./logs/scheduler.log"
+    rotation:
+      max_size: "100MB"
+      max_files: 10
+      max_age: "30d"
+  
+  tracing:
+    enabled: true
+    jaeger_endpoint: "${JAEGER_ENDPOINT}"
+    service_name: "newsforge-scheduler"
+
+# Resource limits
+resources:
+  max_memory: "2GB"
+  max_cpu: "2"
+  disk_space_threshold: "85%"
+  
+  job_limits:
+    theme_extraction:
+      memory: "1GB"
+      cpu: "1"
+    news_ingestion:
+      memory: "512MB"
+      cpu: "0.5"
+    daily_theme_report:
+      memory: "1.5GB"
+      cpu: "1.5"
+
+# Security settings
+security:
+  api_key_required: true
+  allowed_ips:
+    - "127.0.0.1"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+  
+  job_isolation: true
+  sandbox_mode: false
+
+# Backup and recovery
+backup:
+  enabled: true
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  retention: "30d"
+  destinations:
+    - type: "s3"
+      bucket: "${BACKUP_S3_BUCKET}"
+      prefix: "newsforge-scheduler/"
+    - type: "local"
+      path: "./backups/"
+
+# Feature flags
+features:
+  advanced_analytics: true
+  ml_predictions: false  # TODO: Enable when ML models are ready
+  real_time_processing: true
+  distributed_processing: false
+  auto_scaling: true
+
+# Integration settings
+integrations:
+  prometheus:
+    enabled: true
+    push_gateway: "${PROMETHEUS_PUSH_GATEWAY}"
+    job_name: "newsforge-scheduler"
+  
+  grafana:
+    dashboard_url: "${GRAFANA_DASHBOARD_URL}"
+    api_key: "${GRAFANA_API_KEY}"
+  
+  elasticsearch:
+    enabled: false
+    hosts: ["${ELASTICSEARCH_HOST}"]
+    index_prefix: "newsforge-"
+  
+  redis:
+    enabled: true
+    host: "${REDIS_HOST}"
+    port: 6379
+    db: 0
+    password: "${REDIS_PASSWORD}"
+
+# Custom job templates
+templates:
+  analytics_job:
+    timeout: "15m"
+    priority: "medium"
+    retry_policy:
+      max_retries: 3
+      retry_delay: "2m"
+    notifications:
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/job-failure"
+  
+  ingestion_job:
+    timeout: "10m"
+    priority: "high"
+    retry_policy:
+      max_retries: 5
+      retry_delay: "1m"
+    metrics:
+      - name: "items_processed"
+        type: "counter"
+      - name: "processing_duration"
+        type: "histogram"
+
+# Maintenance windows
+maintenance:
+  windows:
+    - name: "Weekly Maintenance"
+      schedule: "0 4 * * 0"  # Sunday at 4 AM
+      duration: "2h"
+      affected_jobs:
+        - "theme_extraction"
+        - "news_ingestion"
+      
+    - name: "Monthly Deep Maintenance"
+      schedule: "0 2 1 * *"  # First day of month at 2 AM
+      duration: "4h"
+      affected_jobs: "all"
+
+# API endpoints for job management
+api:
+  enabled: true
+  port: 8080
+  endpoints:
+    - path: "/jobs"
+      methods: ["GET", "POST"]
+      description: "List and create jobs"
+    
+    - path: "/jobs/{id}"
+      methods: ["GET", "PUT", "DELETE"]
+      description: "Manage specific job"
+    
+    - path: "/jobs/{id}/run"
+      methods: ["POST"]
+      description: "Trigger job execution"
+    
+    - path: "/jobs/{id}/logs"
+      methods: ["GET"]
+      description: "Get job execution logs"
+    
+    - path: "/health"
+      methods: ["GET"]
+      description: "Scheduler health check"
+    
+    - path: "/metrics"
+      methods: ["GET"]
+      description: "Prometheus metrics"
+
+# Documentation
+documentation:
+  version: "1.0.0"
+  description: |
+    Dr. NewsForge's Automated Job Scheduler manages all background tasks
+    for the AI News Dashboard, including theme extraction, news ingestion,
+    sentiment analysis, and system maintenance.
+    
+    Key Features:
+    - Hourly theme extraction from top 100 articles
+    - Automated news ingestion every 30 minutes
+    - Daily and weekly analytical reports
+    - System health monitoring
+    - Intelligent retry and failure handling
+    - Comprehensive metrics and alerting
+  
+  examples:
+    manual_job_trigger: |
+      curl -X POST http://localhost:8080/jobs/theme_extraction/run \
+        -H "Authorization: Bearer ${API_TOKEN}"
+    
+    job_status_check: |
+      curl http://localhost:8080/jobs/theme_extraction \
+        -H "Authorization: Bearer ${API_TOKEN}"
+    
+    view_metrics: |
+      curl http://localhost:8080/metrics

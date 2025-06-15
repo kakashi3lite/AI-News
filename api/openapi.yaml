@@ -1,0 +1,609 @@
+openapi: 3.0.3
+info:
+  title: AI News Dashboard - NLP Summarization API
+  description: |
+    Dr. NewsForge's AI-powered news summarization and analysis API.
+    
+    This API provides advanced NLP capabilities including:
+    - Multi-model text summarization (O4, OpenAI GPT)
+    - Batch processing for multiple articles
+    - Real-time summarization with WebSocket support
+    - Sentiment analysis and theme extraction
+    - Caching and performance optimization
+    
+    ## Authentication
+    API keys are required for external access. Internal dashboard requests are authenticated via session.
+    
+    ## Rate Limits
+    - Standard: 100 requests/hour
+    - Premium: 1000 requests/hour
+    - Batch: 50 articles per request
+    
+    ## Models Available
+    - `o4-mini-high`: Fast, efficient summarization
+    - `gpt-3.5-turbo`: Balanced performance and quality
+    - `gpt-4`: Advanced analysis and reasoning
+  version: 1.0.0
+  contact:
+    name: Dr. NewsForge
+    email: newsforge@ai-dashboard.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://ai-news-dashboard.com/api
+    description: Production server
+
+paths:
+  /summarize:
+    post:
+      summary: Summarize single article or text content
+      description: |
+        Generate AI-powered summaries of news articles or text content using various models and styles.
+        Supports multiple summarization types and customizable output formats.
+      operationId: summarizeContent
+      tags:
+        - Summarization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SummarizeRequest'
+            examples:
+              basic_summary:
+                summary: Basic article summarization
+                value:
+                  content: "Artificial intelligence is revolutionizing healthcare through advanced diagnostic tools and personalized treatment plans..."
+                  type: "standard"
+                  style: "abstractive"
+              bullet_points:
+                summary: Extract key facts as bullet points
+                value:
+                  content: "Breaking news about climate change impacts on global agriculture..."
+                  type: "brief"
+                  style: "extractive"
+                  model: "gpt-3.5-turbo"
+              sentiment_analysis:
+                summary: Summary with sentiment analysis
+                value:
+                  content: "Stock market shows positive trends amid economic recovery..."
+                  type: "standard"
+                  style: "sentiment"
+                  includeMetrics: true
+      responses:
+        '200':
+          description: Successful summarization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummarizeResponse'
+              examples:
+                standard_response:
+                  summary: Standard summarization result
+                  value:
+                    text: "AI is transforming healthcare through diagnostic tools and personalized treatments, improving patient outcomes and reducing costs."
+                    type: "standard"
+                    style: "abstractive"
+                    model: "o4-mini-high"
+                    wordCount: 18
+                    qualityScore: 85
+                    readability: 72
+                    keywords: ["AI", "healthcare", "diagnostic", "personalized", "treatments"]
+                    cached: false
+                    processingTime: 1250
+                    generatedAt: "2024-01-15T10:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /summarize/batch:
+    post:
+      summary: Batch summarize multiple articles
+      description: |
+        Process multiple articles simultaneously with intelligent batching and rate limiting.
+        Ideal for bulk processing of news feeds or article collections.
+      operationId: summarizeBatch
+      tags:
+        - Summarization
+        - Batch Processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchSummarizeRequest'
+            example:
+              articles:
+                - id: "article_1"
+                  title: "AI Breakthrough in Medical Diagnosis"
+                  content: "Researchers have developed a new AI system..."
+                - id: "article_2"
+                  title: "Climate Change Impact on Agriculture"
+                  content: "New study reveals significant effects..."
+              options:
+                type: "brief"
+                style: "extractive"
+                model: "o4-mini-high"
+      responses:
+        '200':
+          description: Batch processing completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSummarizeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Batch size too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Batch size exceeds limit"
+                message: "Maximum 50 articles per batch request"
+                code: "BATCH_SIZE_EXCEEDED"
+
+  /summarize/models:
+    get:
+      summary: Get available summarization models
+      description: Retrieve list of available AI models with their capabilities and configurations
+      operationId: getModels
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Available models list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+              example:
+                models:
+                  - name: "o4-mini-high"
+                    provider: "o4"
+                    maxTokens: 4000
+                    capabilities: ["summarization", "analysis", "extraction"]
+                    available: true
+                  - name: "gpt-3.5-turbo"
+                    provider: "openai"
+                    maxTokens: 4000
+                    capabilities: ["summarization", "analysis", "creative"]
+                    available: true
+
+  /summarize/health:
+    get:
+      summary: Health check for summarization service
+      description: Check the health and status of the summarization service and connected models
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                timestamp: "2024-01-15T10:30:00Z"
+                models:
+                  o4-mini-high: "available"
+                  gpt-3.5-turbo: "available"
+                cache:
+                  status: "active"
+                  size: 1024
+                  hitRate: 0.75
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "degraded"
+                timestamp: "2024-01-15T10:30:00Z"
+                models:
+                  o4-mini-high: "unavailable"
+                  gpt-3.5-turbo: "available"
+                issues: ["O4 model API timeout"]
+
+  /summarize/cache:
+    delete:
+      summary: Clear summarization cache
+      description: Clear cached summaries (admin only)
+      operationId: clearCache
+      tags:
+        - Cache Management
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Cache cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cache cleared successfully"
+                  clearedItems:
+                    type: integer
+                    example: 156
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    SummarizeRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          description: Text content to summarize
+          minLength: 50
+          maxLength: 10000
+          example: "Artificial intelligence is revolutionizing healthcare..."
+        type:
+          type: string
+          enum: ["brief", "standard", "detailed", "executive"]
+          default: "standard"
+          description: Summary length and detail level
+        style:
+          type: string
+          enum: ["extractive", "abstractive", "thematic", "sentiment"]
+          default: "abstractive"
+          description: Summarization approach
+        model:
+          type: string
+          enum: ["o4-mini-high", "gpt-3.5-turbo", "gpt-4"]
+          default: "o4-mini-high"
+          description: AI model to use
+        language:
+          type: string
+          default: "en"
+          description: Content language (ISO 639-1)
+        title:
+          type: string
+          description: Article title for context
+        category:
+          type: string
+          description: Article category for context
+        includeMetrics:
+          type: boolean
+          default: false
+          description: Include detailed metrics in response
+
+    SummarizeResponse:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Generated summary text
+        type:
+          type: string
+          description: Summary type used
+        style:
+          type: string
+          description: Summarization style used
+        model:
+          type: string
+          description: AI model used
+        wordCount:
+          type: integer
+          description: Number of words in summary
+        qualityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Summary quality score
+        readability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Readability score (Flesch)
+        keywords:
+          type: array
+          items:
+            type: string
+          description: Extracted keywords
+        keyPoints:
+          type: array
+          items:
+            type: string
+          description: Key bullet points (for extractive summaries)
+        sentiment:
+          type: string
+          enum: ["positive", "negative", "neutral"]
+          description: Overall sentiment (for sentiment analysis)
+        themes:
+          type: array
+          items:
+            type: string
+          description: Identified themes (for thematic analysis)
+        cached:
+          type: boolean
+          description: Whether result was served from cache
+        processingTime:
+          type: integer
+          description: Processing time in milliseconds
+        generatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when summary was generated
+        config:
+          type: object
+          description: Configuration used for summarization
+
+    BatchSummarizeRequest:
+      type: object
+      required:
+        - articles
+      properties:
+        articles:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/Article'
+        options:
+          $ref: '#/components/schemas/SummarizeOptions'
+
+    Article:
+      type: object
+      required:
+        - id
+        - content
+      properties:
+        id:
+          type: string
+          description: Unique article identifier
+        title:
+          type: string
+          description: Article title
+        content:
+          type: string
+          description: Article content
+        category:
+          type: string
+          description: Article category
+        url:
+          type: string
+          format: uri
+          description: Article URL
+
+    SummarizeOptions:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["brief", "standard", "detailed", "executive"]
+          default: "standard"
+        style:
+          type: string
+          enum: ["extractive", "abstractive", "thematic", "sentiment"]
+          default: "abstractive"
+        model:
+          type: string
+          enum: ["o4-mini-high", "gpt-3.5-turbo", "gpt-4"]
+          default: "o4-mini-high"
+        language:
+          type: string
+          default: "en"
+        includeMetrics:
+          type: boolean
+          default: false
+
+    BatchSummarizeResponse:
+      type: object
+      properties:
+        summaries:
+          type: array
+          items:
+            allOf:
+              - type: object
+                properties:
+                  articleId:
+                    type: string
+                  title:
+                    type: string
+              - $ref: '#/components/schemas/SummarizeResponse'
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              articleId:
+                type: string
+              title:
+                type: string
+              error:
+                type: string
+        stats:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            cached:
+              type: integer
+            totalProcessingTime:
+              type: integer
+
+    ModelsResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              provider:
+                type: string
+              maxTokens:
+                type: integer
+              capabilities:
+                type: array
+                items:
+                  type: string
+              available:
+                type: boolean
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["healthy", "degraded", "unhealthy"]
+        timestamp:
+          type: string
+          format: date-time
+        models:
+          type: object
+          additionalProperties:
+            type: string
+        cache:
+          type: object
+          properties:
+            status:
+              type: string
+            size:
+              type: integer
+            hitRate:
+              type: number
+        issues:
+          type: array
+          items:
+            type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Error code for programmatic handling
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation Error"
+            message: "Content is required and must be between 50-10000 characters"
+            code: "INVALID_INPUT"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Valid API key required"
+            code: "AUTH_REQUIRED"
+
+    RateLimit:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Rate Limit Exceeded"
+            message: "Maximum 100 requests per hour exceeded"
+            code: "RATE_LIMIT"
+      headers:
+        X-RateLimit-Limit:
+          description: Request limit per hour
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Time when rate limit resets
+          schema:
+            type: integer
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal Server Error"
+            message: "An unexpected error occurred while processing your request"
+            code: "INTERNAL_ERROR"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authenticated users
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+tags:
+  - name: Summarization
+    description: Core summarization operations
+  - name: Batch Processing
+    description: Bulk processing operations
+  - name: Configuration
+    description: Service configuration and model management
+  - name: Health
+    description: Service health and monitoring
+  - name: Cache Management
+    description: Cache operations and management
+
+externalDocs:
+  description: Full API Documentation
+  url: https://ai-news-dashboard.com/docs
