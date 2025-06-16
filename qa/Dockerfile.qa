@@ -1,0 +1,141 @@
+# Dr. Orion TestMaster Vanguard - QA Orchestrator Dockerfile
+# Superhuman QA Testing Environment
+
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    unzip \
+    xvfb \
+    x11vnc \
+    fluxbox \
+    wmctrl \
+    git \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libjpeg-dev \
+    libpng-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libwebp-dev \
+    tcl8.6-dev \
+    tk8.6-dev \
+    python3-tk \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libxcb1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ChromeDriver
+RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) \
+    && wget -O /tmp/chromedriver.zip http://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip \
+    && unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/ \
+    && rm /tmp/chromedriver.zip \
+    && chmod +x /usr/local/bin/chromedriver
+
+# Install Firefox
+RUN apt-get update && apt-get install -y firefox-esr \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install GeckoDriver
+RUN GECKO_DRIVER_VERSION=$(curl -sS https://api.github.com/repos/mozilla/geckodriver/releases/latest | grep '"tag_name"' | cut -d '"' -f 4) \
+    && wget -O /tmp/geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/$GECKO_DRIVER_VERSION/geckodriver-$GECKO_DRIVER_VERSION-linux64.tar.gz \
+    && tar -xzf /tmp/geckodriver.tar.gz -C /usr/local/bin/ \
+    && rm /tmp/geckodriver.tar.gz \
+    && chmod +x /usr/local/bin/geckodriver
+
+# Install Node.js and npm for Playwright
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
+# Create app directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright browsers
+RUN playwright install chromium firefox webkit \
+    && playwright install-deps
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/reports /app/logs /app/test_data /app/screenshots /app/videos
+
+# Set up display for headless browser testing
+ENV DISPLAY=:99
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Start Xvfb\n\
+Xvfb :99 -screen 0 1920x1080x24 &\n\
+XVFB_PID=$!\n\
+\n\
+# Start fluxbox window manager\n\
+fluxbox &\n\
+FLUXBOX_PID=$!\n\
+\n\
+# Wait for X server to start\n\
+sleep 2\n\
+\n\
+# Function to cleanup on exit\n\
+cleanup() {\n\
+    echo "Cleaning up..."\n\
+    kill $XVFB_PID $FLUXBOX_PID 2>/dev/null || true\n\
+    exit 0\n\
+}\n\
+\n\
+# Set up signal handlers\n\
+trap cleanup SIGTERM SIGINT\n\
+\n\
+# Start the QA orchestrator\n\
+echo "Starting Dr. Orion TestMaster Vanguard QA Orchestrator..."\n\
+python -m uvicorn superhuman_qa_orchestrator:app --host 0.0.0.0 --port 8080 --reload &\n\
+APP_PID=$!\n\
+\n\
+# Wait for the application\n\
+wait $APP_PID' > /app/start.sh
+
+RUN chmod +x /app/start.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose port
+EXPOSE 8080
+
+# Set user for security
+RUN useradd -m -u 1000 qauser && chown -R qauser:qauser /app
+USER qauser
+
+# Start the application
+CMD ["/app/start.sh"]

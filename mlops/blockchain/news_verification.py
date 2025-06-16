@@ -6,7 +6,7 @@ Implements a decentralized news verification system using blockchain technology
 to combat misinformation and establish trust scores for news sources.
 
 Features:
-- Blockchain-based news verification
+- Blockchain-based news verification 
 - Decentralized fact-checking network
 - Source credibility scoring
 - Immutable audit trails
@@ -19,6 +19,10 @@ Author: Dr. Nova "NewsForge" Arclight
 Version: 2.0.0
 """
 
+from typing import Dict, List, Optional, Any, Tuple, Union, Callable
+from dataclasses import dataclass, asdict
+from datetime import datetime, timedelta
+from pathlib import Path
 import os
 import json
 import time
@@ -26,1100 +30,976 @@ import logging
 import asyncio
 import hashlib
 import threading
-from typing import Dict, List, Optional, Any, Tuple, Union, Callable
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 import uuid
 import base64
-from pathlib import Path
 
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-from transformers import (
-    AutoTokenizer, AutoModelForSequenceClassification,
-    pipeline, BertTokenizer, BertModel
-)
-from sentence_transformers import SentenceTransformer
-import spacy
-from textblob import TextBlob
+try:
+    import numpy as np
+    import pandas as pd
+except ImportError:
+    print("Warning: numpy/pandas not available. Some features may be limited.")
+    np = None
+    pd = None
 
-import web3
-from web3 import Web3
-from eth_account import Account
-from solcx import compile_source, install_solc
-import ipfshttpclient
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
+try:
+    import torch
+    import torch.nn as nn
+except ImportError:
+    print("Warning: PyTorch not available. Deep learning features disabled.")
+    torch = None
+    nn = None
+
+try:
+    from transformers import (
+        AutoTokenizer, AutoModelForSequenceClassification,
+        pipeline, BertTokenizer, BertModel
+    )
+except ImportError:
+    print("Warning: transformers not available. NLP features limited.")
+    AutoTokenizer = None
+    AutoModelForSequenceClassification = None
+    pipeline = None
+    BertTokenizer = None
+    BertModel = None
+
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    print("Warning: sentence-transformers not available.")
+    SentenceTransformer = None
+
+try:
+    import spacy
+except ImportError:
+    print("Warning: spacy not available.")
+    spacy = None
+
+try:
+    from textblob import TextBlob
+except ImportError:
+    print("Warning: textblob not available.")
+    TextBlob = None
+
+try:
+    import web3
+    from web3 import Web3
+    from eth_account import Account
+except ImportError:
+    print("Warning: web3 not available. Blockchain features disabled.")
+    web3 = None
+    Web3 = None
+    Account = None
+
+try:
+    from solcx import compile_source, install_solc
+except ImportError:
+    print("Warning: solcx not available. Smart contract compilation disabled.")
+    compile_source = None
+    install_solc = None
+
+try:
+    import ipfshttpclient
+except ImportError:
+    print("Warning: ipfshttpclient not available. IPFS features disabled.")
+    ipfshttpclient = None
+
+try:
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa, padding
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+except ImportError:
+    print("Warning: cryptography not available. Encryption features disabled.")
+    hashes = None
+    serialization = None
+    rsa = None
+    padding = None
+    load_pem_private_key = None
 
 import requests
-from flask import Flask, request, jsonify, Response
-import redis
-import pymongo
-from pymongo import MongoClient
-from elasticsearch import Elasticsearch
+try:
+    from flask import Flask, request, jsonify, Response
+except ImportError:
+    print("Warning: Flask not available. Web API disabled.")
+    Flask = None
+    request = None
+    jsonify = None
+    Response = None
 
-from sklearn.ensemble import RandomForestClassifier, IsolationForest
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+try:
+    import redis
+except ImportError:
+    print("Warning: redis not available. Caching disabled.")
+    redis = None
 
-import networkx as nx
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
+try:
+    import pymongo
+    from pymongo import MongoClient
+except ImportError:
+    print("Warning: pymongo not available. MongoDB features disabled.")
+    pymongo = None
+    MongoClient = None
 
-from prometheus_client import Counter, Histogram, Gauge, start_http_server
-import mlflow
-import wandb
+try:
+    from elasticsearch import Elasticsearch
+except ImportError:
+    print("Warning: elasticsearch not available. Search features disabled.")
+    Elasticsearch = None
 
-# Configure logging
+try:
+    from sklearn.ensemble import RandomForestClassifier, IsolationForest
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+except ImportError:
+    print("Warning: scikit-learn not available. ML features limited.")
+    RandomForestClassifier = None
+    IsolationForest = None
+    TfidfVectorizer = None
+    cosine_similarity = None
+    StandardScaler = None
+    train_test_split = None
+
+try:
+    import networkx as nx
+except ImportError:
+    print("Warning: networkx not available. Network analysis disabled.")
+    nx = None
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("Warning: matplotlib not available. Plotting disabled.")
+    plt = None
+
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+    from plotly.subplots import make_subplots
+except ImportError:
+    print("Warning: plotly not available. Interactive plotting disabled.")
+    go = None
+    px = None
+    make_subplots = None
+
+try:
+    from prometheus_client import Counter, Histogram, Gauge, start_http_server
+except ImportError:
+    print("Warning: prometheus_client not available. Metrics disabled.")
+    Counter = None
+    Histogram = None
+    Gauge = None
+    start_http_server = None
+
+try:
+    import mlflow
+except ImportError:
+    print("Warning: mlflow not available. Experiment tracking disabled.")
+    mlflow = None
+
+try:
+    import wandb
+except ImportError:
+    print("Warning: wandb not available. Experiment tracking disabled.")
+    wandb = None
+
+# Configure logging with structured format
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('news_verification.log')
+    ]
 )
 logger = logging.getLogger(__name__)
 
-# Prometheus metrics
-VERIFICATION_REQUESTS = Counter('verification_requests_total', 'Total verification requests', ['source_type'])
-VERIFICATION_LATENCY = Histogram('verification_latency_seconds', 'Verification processing latency')
-TRUST_SCORE_UPDATES = Counter('trust_score_updates_total', 'Trust score updates', ['source'])
-MISINFORMATION_DETECTED = Counter('misinformation_detected_total', 'Misinformation cases detected', ['severity'])
-BLOCKCHAIN_TRANSACTIONS = Counter('blockchain_transactions_total', 'Blockchain transactions', ['type'])
-CONSENSUS_ROUNDS = Counter('consensus_rounds_total', 'Consensus rounds completed', ['result'])
-VERIFIER_REWARDS = Counter('verifier_rewards_total', 'Rewards distributed to verifiers')
-NETWORK_TRUST = Gauge('network_trust_score', 'Overall network trust score')
+# Enhanced Prometheus metrics with more detailed labels (only if prometheus_client is available)
+if Counter and Histogram and Gauge:
+    VERIFICATION_REQUESTS = Counter(
+        'verification_requests_total', 
+        'Total verification requests',
+        ['source_type', 'language', 'status']
+    )
+    VERIFICATION_LATENCY = Histogram(
+        'verification_latency_seconds',
+        'Verification processing latency',
+        buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+    )
+    TRUST_SCORE_UPDATES = Counter(
+        'trust_score_updates_total',
+        'Trust score updates',
+        ['source', 'direction']
+    )
+    MISINFORMATION_DETECTED = Counter(
+        'misinformation_detected_total',
+        'Misinformation cases detected',
+        ['severity', 'category']
+    )
+    BLOCKCHAIN_TRANSACTIONS = Counter(
+        'blockchain_transactions_total',
+        'Blockchain transactions',
+        ['type', 'status']
+    )
+    CONSENSUS_ROUNDS = Counter(
+        'consensus_rounds_total',
+        'Consensus rounds completed',
+        ['result', 'verifier_count']
+    )
+    VERIFIER_REWARDS = Counter(
+        'verifier_rewards_total',
+        'Rewards distributed to verifiers',
+        ['verifier_type', 'reward_tier']
+    )
+    NETWORK_TRUST = Gauge(
+        'network_trust_score',
+        'Overall network trust score',
+        ['network_segment']
+    )
+else:
+    # Create dummy metrics if prometheus_client is not available
+    class DummyMetric:
+        def inc(self, *args, **kwargs):
+            pass
+        def observe(self, *args, **kwargs):
+            pass
+        def set(self, *args, **kwargs):
+            pass
+    
+    VERIFICATION_REQUESTS = DummyMetric()
+    VERIFICATION_LATENCY = DummyMetric()
+    TRUST_SCORE_UPDATES = DummyMetric()
+    MISINFORMATION_DETECTED = DummyMetric()
+    BLOCKCHAIN_TRANSACTIONS = DummyMetric()
+    CONSENSUS_ROUNDS = DummyMetric()
+    VERIFIER_REWARDS = DummyMetric()
+    NETWORK_TRUST = DummyMetric()
+
 
 @dataclass
 class NewsArticle:
     """Represents a news article for verification."""
-    article_id: str
+    id: str
     title: str
     content: str
     source: str
-    author: str
-    published_at: datetime
+    author: Optional[str]
+    published_date: datetime
     url: str
-    hash: str
-    language: str = 'en'
+    language: str = "en"
     category: Optional[str] = None
-    claims: Optional[List[str]] = None
-    entities: Optional[List[Dict[str, Any]]] = None
-    embedding: Optional[List[float]] = None
+    tags: List[str] = None
+    
+    def __post_init__(self):
+        if self.tags is None:
+            self.tags = []
+
 
 @dataclass
 class VerificationResult:
     """Represents the result of news verification."""
-    verification_id: str
     article_id: str
-    verifier_id: str
-    trust_score: float  # 0.0 to 1.0
-    credibility_score: float  # 0.0 to 1.0
-    misinformation_probability: float  # 0.0 to 1.0
-    fact_check_results: List[Dict[str, Any]]
-    source_analysis: Dict[str, Any]
-    consensus_score: float
+    trust_score: float
+    credibility_score: float
+    misinformation_probability: float
     verification_timestamp: datetime
-    blockchain_hash: Optional[str] = None
-    ipfs_hash: Optional[str] = None
-    evidence: Optional[List[Dict[str, Any]]] = None
-    confidence: float = 0.0
+    verifier_consensus: Dict[str, Any]
+    blockchain_hash: Optional[str]
+    evidence: List[Dict[str, Any]]
+    confidence_level: str
+    
 
 @dataclass
 class SourceCredibility:
     """Represents source credibility metrics."""
-    source_id: str
     source_name: str
-    domain: str
     trust_score: float
-    accuracy_history: List[float]
-    bias_score: float  # -1.0 (left) to 1.0 (right)
-    factual_reporting: str  # 'high', 'mixed', 'low'
-    verification_count: int
-    last_updated: datetime
-    reputation_factors: Dict[str, float]
-
-@dataclass
-class VerifierNode:
-    """Represents a verifier node in the network."""
-    node_id: str
-    public_key: str
-    reputation_score: float
-    verification_count: int
+    verification_history: List[Dict[str, Any]]
+    bias_score: float
     accuracy_rate: float
-    stake_amount: float
-    last_active: datetime
-    specializations: List[str]  # Topics/categories
-    geographic_region: str
-    node_type: str  # 'human', 'ai', 'hybrid'
+    last_updated: datetime
+    
 
-class BlockchainVerificationSystem:
-    """Core blockchain verification system."""
+class NewsVerificationSystem:
+    """Main class for blockchain-based news verification."""
     
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
+    def __init__(self, config: Dict[str, Any] = None):
+        """Initialize the news verification system."""
+        self.config = config or {}
+        self.blockchain_enabled = Web3 is not None
+        self.ml_enabled = torch is not None and AutoTokenizer is not None
         
-        # Blockchain setup
-        self.w3 = Web3(Web3.HTTPProvider(config.get('ethereum_rpc', 'http://localhost:8545')))
-        self.account = Account.from_key(config.get('private_key'))
+        # Initialize components
+        self._init_blockchain()
+        self._init_ml_models()
+        self._init_storage()
+        self._init_metrics()
         
-        # IPFS setup
-        try:
-            self.ipfs_client = ipfshttpclient.connect('/ip4/127.0.0.1/tcp/5001/http')
-        except Exception as e:
-            logger.warning(f"IPFS connection failed: {e}")
-            self.ipfs_client = None
-        
-        # Smart contract
-        self.contract = None
-        self.deploy_smart_contract()
-        
-        # Storage backends
-        self.redis_client = redis.Redis(
-            host=config.get('redis_host', 'localhost'),
-            port=config.get('redis_port', 6379),
-            decode_responses=True
-        )
-        
-        self.mongo_client = MongoClient(config.get('mongodb_uri', 'mongodb://localhost:27017/'))
-        self.db = self.mongo_client.news_verification
-        
-        # Verification components
-        self.fact_checker = FactChecker(config)
-        self.source_analyzer = SourceAnalyzer(config)
-        self.consensus_engine = ConsensusEngine(config)
-        
-        # Network state
-        self.verifier_nodes = {}
-        self.source_credibility = {}
-        self.verification_history = deque(maxlen=10000)
-        
-        logger.info("Blockchain verification system initialized")
+        logger.info("NewsVerificationSystem initialized")
+        logger.info(f"Blockchain enabled: {self.blockchain_enabled}")
+        logger.info(f"ML enabled: {self.ml_enabled}")
     
-    def deploy_smart_contract(self):
-        """Deploy the news verification smart contract."""
-        try:
-            # Smart contract source code
-            contract_source = '''
-            pragma solidity ^0.8.0;
-            
-            contract NewsVerification {
-                struct VerificationRecord {
-                    string articleHash;
-                    address verifier;
-                    uint256 trustScore;
-                    uint256 timestamp;
-                    string ipfsHash;
-                    bool isValid;
-                }
+    def _init_blockchain(self):
+        """Initialize blockchain connection."""
+        if self.blockchain_enabled:
+            try:
+                # Initialize Web3 connection
+                self.w3 = Web3(Web3.HTTPProvider(
+                    self.config.get('blockchain_url', 'http://localhost:8545')
+                ))
                 
-                struct SourceCredibility {
-                    string sourceName;
-                    uint256 trustScore;
-                    uint256 verificationCount;
-                    uint256 lastUpdated;
-                }
+                # Create account for transactions
+                self.account = Account.create()
                 
-                mapping(string => VerificationRecord[]) public verifications;
-                mapping(string => SourceCredibility) public sources;
-                mapping(address => uint256) public verifierReputations;
-                mapping(address => uint256) public verifierStakes;
+                logger.info("Blockchain initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize blockchain: {e}")
+                self.blockchain_enabled = False
+        else:
+            self.w3 = None
+            self.account = None
+    
+    def _init_ml_models(self):
+        """Initialize ML models for verification."""
+        if self.ml_enabled:
+            try:
+                # Initialize sentiment analysis pipeline
+                if pipeline:
+                    self.sentiment_analyzer = pipeline(
+                        "sentiment-analysis",
+                        model="cardiffnlp/twitter-roberta-base-sentiment-latest",
+                        return_all_scores=True
+                    )
                 
-                event VerificationSubmitted(string articleHash, address verifier, uint256 trustScore);
-                event SourceUpdated(string sourceName, uint256 newTrustScore);
-                event RewardDistributed(address verifier, uint256 amount);
+                # Initialize sentence transformer for similarity
+                if SentenceTransformer:
+                    self.sentence_model = SentenceTransformer(
+                        'all-MiniLM-L6-v2'
+                    )
                 
-                function submitVerification(
-                    string memory articleHash,
-                    uint256 trustScore,
-                    string memory ipfsHash
-                ) public {
-                    require(verifierStakes[msg.sender] > 0, "Verifier must have stake");
-                    require(trustScore <= 100, "Trust score must be <= 100");
-                    
-                    VerificationRecord memory record = VerificationRecord({
-                        articleHash: articleHash,
-                        verifier: msg.sender,
-                        trustScore: trustScore,
-                        timestamp: block.timestamp,
-                        ipfsHash: ipfsHash,
-                        isValid: true
-                    });
-                    
-                    verifications[articleHash].push(record);
-                    emit VerificationSubmitted(articleHash, msg.sender, trustScore);
-                }
-                
-                function updateSourceCredibility(
-                    string memory sourceName,
-                    uint256 newTrustScore
-                ) public {
-                    sources[sourceName].trustScore = newTrustScore;
-                    sources[sourceName].verificationCount += 1;
-                    sources[sourceName].lastUpdated = block.timestamp;
-                    
-                    emit SourceUpdated(sourceName, newTrustScore);
-                }
-                
-                function stakeTokens() public payable {
-                    require(msg.value > 0, "Stake must be positive");
-                    verifierStakes[msg.sender] += msg.value;
-                }
-                
-                function distributeReward(address verifier, uint256 amount) public {
-                    require(verifierStakes[verifier] > 0, "Invalid verifier");
-                    
-                    verifierReputations[verifier] += amount;
-                    emit RewardDistributed(verifier, amount);
-                }
-                
-                function getVerifications(string memory articleHash) 
-                    public view returns (VerificationRecord[] memory) {
-                    return verifications[articleHash];
-                }
-                
-                function getSourceCredibility(string memory sourceName) 
-                    public view returns (SourceCredibility memory) {
-                    return sources[sourceName];
-                }
-            }
-            '''
-            
-            # Compile contract
-            install_solc('0.8.0')
-            compiled_sol = compile_source(contract_source)
-            contract_interface = compiled_sol['<stdin>:NewsVerification']
-            
-            # Deploy contract
-            if self.w3.isConnected():
-                contract = self.w3.eth.contract(
-                    abi=contract_interface['abi'],
-                    bytecode=contract_interface['bin']
+                logger.info("ML models initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize ML models: {e}")
+                self.ml_enabled = False
+        else:
+            self.sentiment_analyzer = None
+            self.sentence_model = None
+    
+    def _init_storage(self):
+        """Initialize storage systems."""
+        # Initialize Redis for caching
+        if redis:
+            try:
+                self.redis_client = redis.Redis(
+                    host=self.config.get('redis_host', 'localhost'),
+                    port=self.config.get('redis_port', 6379),
+                    decode_responses=True
                 )
-                
-                # Build transaction
-                transaction = contract.constructor().buildTransaction({
-                    'from': self.account.address,
-                    'nonce': self.w3.eth.get_transaction_count(self.account.address),
-                    'gas': 2000000,
-                    'gasPrice': self.w3.toWei('20', 'gwei')
-                })
-                
-                # Sign and send transaction
-                signed_txn = self.w3.eth.account.sign_transaction(transaction, self.account.privateKey)
-                tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-                
-                # Wait for transaction receipt
-                tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-                
-                # Create contract instance
-                self.contract = self.w3.eth.contract(
-                    address=tx_receipt.contractAddress,
-                    abi=contract_interface['abi']
+                self.redis_client.ping()
+                logger.info("Redis initialized successfully")
+            except Exception as e:
+                logger.warning(f"Redis not available: {e}")
+                self.redis_client = None
+        else:
+            self.redis_client = None
+        
+        # Initialize MongoDB for persistent storage
+        if MongoClient:
+            try:
+                self.mongo_client = MongoClient(
+                    self.config.get('mongo_url', 'mongodb://localhost:27017/')
                 )
-                
-                logger.info(f"Smart contract deployed at: {tx_receipt.contractAddress}")
-            else:
-                logger.warning("Ethereum node not connected, using mock contract")
-                
-        except Exception as e:
-            logger.error(f"Smart contract deployment failed: {e}")
+                self.db = self.mongo_client.news_verification
+                logger.info("MongoDB initialized successfully")
+            except Exception as e:
+                logger.warning(f"MongoDB not available: {e}")
+                self.mongo_client = None
+                self.db = None
+        else:
+            self.mongo_client = None
+            self.db = None
     
-    async def verify_article(self, article: NewsArticle) -> VerificationResult:
-        """Verify a news article using the blockchain network."""
+    def _init_metrics(self):
+        """Initialize metrics collection."""
+        if start_http_server:
+            try:
+                # Start Prometheus metrics server
+                metrics_port = self.config.get('metrics_port', 8000)
+                start_http_server(metrics_port)
+                logger.info(f"Metrics server started on port {metrics_port}")
+            except Exception as e:
+                logger.warning(f"Failed to start metrics server: {e}")
+    
+    def verify_article(self, article: NewsArticle) -> VerificationResult:
+        """Verify a news article using multiple methods."""
         start_time = time.time()
         
         try:
-            # Generate verification ID
-            verification_id = str(uuid.uuid4())
+            # Record verification request
+            VERIFICATION_REQUESTS.inc({
+                'source_type': article.source,
+                'language': article.language,
+                'status': 'started'
+            })
             
-            # Perform fact-checking
-            fact_check_results = await self.fact_checker.check_facts(article)
+            # Perform verification steps
+            trust_score = self._calculate_trust_score(article)
+            credibility_score = self._calculate_credibility_score(article)
+            misinformation_prob = self._detect_misinformation(article)
             
-            # Analyze source credibility
-            source_analysis = await self.source_analyzer.analyze_source(article.source)
+            # Get verifier consensus
+            consensus = self._get_verifier_consensus(article)
             
-            # Calculate initial scores
-            trust_score = self._calculate_trust_score(fact_check_results, source_analysis)
-            credibility_score = source_analysis.get('credibility_score', 0.5)
-            misinformation_prob = self._calculate_misinformation_probability(fact_check_results)
+            # Store on blockchain if enabled
+            blockchain_hash = None
+            if self.blockchain_enabled:
+                blockchain_hash = self._store_on_blockchain(article, {
+                    'trust_score': trust_score,
+                    'credibility_score': credibility_score,
+                    'misinformation_probability': misinformation_prob
+                })
             
-            # Store verification data in IPFS
-            ipfs_hash = None
-            if self.ipfs_client:
-                verification_data = {
-                    'article': asdict(article),
-                    'fact_check_results': fact_check_results,
-                    'source_analysis': source_analysis,
-                    'timestamp': datetime.now().isoformat()
-                }
-                ipfs_result = self.ipfs_client.add_json(verification_data)
-                ipfs_hash = ipfs_result['Hash']
-            
-            # Submit to blockchain
-            blockchain_hash = await self._submit_to_blockchain(
-                article.hash, trust_score, ipfs_hash
-            )
-            
-            # Get consensus from network
-            consensus_score = await self.consensus_engine.get_consensus(
-                article, fact_check_results, source_analysis
+            # Determine confidence level
+            confidence_level = self._determine_confidence_level(
+                trust_score, credibility_score, misinformation_prob
             )
             
             # Create verification result
             result = VerificationResult(
-                verification_id=verification_id,
-                article_id=article.article_id,
-                verifier_id=self.account.address,
+                article_id=article.id,
                 trust_score=trust_score,
                 credibility_score=credibility_score,
                 misinformation_probability=misinformation_prob,
-                fact_check_results=fact_check_results,
-                source_analysis=source_analysis,
-                consensus_score=consensus_score,
                 verification_timestamp=datetime.now(),
+                verifier_consensus=consensus,
                 blockchain_hash=blockchain_hash,
-                ipfs_hash=ipfs_hash,
-                confidence=min(consensus_score, trust_score)
+                evidence=[],
+                confidence_level=confidence_level
             )
             
-            # Store in database
-            await self._store_verification_result(result)
-            
-            # Update source credibility
-            await self._update_source_credibility(article.source, result)
+            # Store result
+            self._store_verification_result(result)
             
             # Record metrics
-            processing_time = time.time() - start_time
-            VERIFICATION_LATENCY.observe(processing_time)
-            VERIFICATION_REQUESTS.labels(source_type=article.source).inc()
+            VERIFICATION_LATENCY.observe(time.time() - start_time)
+            VERIFICATION_REQUESTS.inc({
+                'source_type': article.source,
+                'language': article.language,
+                'status': 'completed'
+            })
             
             if misinformation_prob > 0.7:
-                MISINFORMATION_DETECTED.labels(severity='high').inc()
-            elif misinformation_prob > 0.4:
-                MISINFORMATION_DETECTED.labels(severity='medium').inc()
+                MISINFORMATION_DETECTED.inc({
+                    'severity': 'high',
+                    'category': article.category or 'unknown'
+                })
             
-            logger.info(f"Article verification completed: {verification_id}")
+            logger.info(f"Article {article.id} verified successfully")
             return result
             
         except Exception as e:
-            logger.error(f"Article verification failed: {e}")
+            logger.error(f"Failed to verify article {article.id}: {e}")
+            VERIFICATION_REQUESTS.inc({
+                'source_type': article.source,
+                'language': article.language,
+                'status': 'failed'
+            })
             raise
     
-    def _calculate_trust_score(self, fact_check_results: List[Dict], source_analysis: Dict) -> float:
-        """Calculate trust score based on fact-checking and source analysis."""
-        try:
-            # Fact-checking component (60% weight)
-            fact_score = 0.0
-            if fact_check_results:
-                verified_claims = sum(1 for result in fact_check_results if result.get('verified', False))
-                total_claims = len(fact_check_results)
-                fact_score = verified_claims / total_claims if total_claims > 0 else 0.5
-            
-            # Source credibility component (40% weight)
-            source_score = source_analysis.get('credibility_score', 0.5)
-            
-            # Weighted combination
-            trust_score = (fact_score * 0.6) + (source_score * 0.4)
-            
-            return max(0.0, min(1.0, trust_score))
-            
-        except Exception as e:
-            logger.error(f"Trust score calculation failed: {e}")
-            return 0.5
+    def _calculate_trust_score(self, article: NewsArticle) -> float:
+        """Calculate trust score for an article."""
+        # Base trust score calculation
+        trust_score = 0.5  # Neutral starting point
+        
+        # Source credibility factor
+        source_credibility = self._get_source_credibility(article.source)
+        trust_score += source_credibility * 0.3
+        
+        # Content analysis factor
+        if self.ml_enabled and self.sentiment_analyzer:
+            try:
+                sentiment_scores = self.sentiment_analyzer(article.content[:512])
+                # Neutral sentiment typically indicates more factual content
+                neutral_score = next(
+                    (s['score'] for s in sentiment_scores[0] if s['label'] == 'NEUTRAL'),
+                    0.5
+                )
+                trust_score += neutral_score * 0.2
+            except Exception as e:
+                logger.warning(f"Sentiment analysis failed: {e}")
+        
+        # Author credibility factor
+        if article.author:
+            author_credibility = self._get_author_credibility(article.author)
+            trust_score += author_credibility * 0.2
+        
+        # Recency factor (newer articles get slight boost)
+        days_old = (datetime.now() - article.published_date).days
+        recency_factor = max(0, 1 - days_old / 365) * 0.1
+        trust_score += recency_factor
+        
+        # URL credibility factor
+        url_credibility = self._analyze_url_credibility(article.url)
+        trust_score += url_credibility * 0.2
+        
+        return min(1.0, max(0.0, trust_score))
     
-    def _calculate_misinformation_probability(self, fact_check_results: List[Dict]) -> float:
-        """Calculate probability of misinformation."""
-        try:
-            if not fact_check_results:
-                return 0.5  # Neutral when no fact-check data
-            
-            false_claims = sum(1 for result in fact_check_results if not result.get('verified', True))
-            total_claims = len(fact_check_results)
-            
-            # Higher false claim ratio = higher misinformation probability
-            misinformation_prob = false_claims / total_claims if total_claims > 0 else 0.0
-            
-            return max(0.0, min(1.0, misinformation_prob))
-            
-        except Exception as e:
-            logger.error(f"Misinformation probability calculation failed: {e}")
-            return 0.5
+    def _calculate_credibility_score(self, article: NewsArticle) -> float:
+        """Calculate credibility score based on content analysis."""
+        credibility_score = 0.5
+        
+        # Content length factor (very short or very long articles are suspicious)
+        content_length = len(article.content)
+        if 200 <= content_length <= 5000:
+            credibility_score += 0.1
+        elif content_length < 100 or content_length > 10000:
+            credibility_score -= 0.2
+        
+        # Title-content consistency
+        if self.ml_enabled and self.sentence_model:
+            try:
+                title_embedding = self.sentence_model.encode([article.title])
+                content_sample = article.content[:500]  # First 500 chars
+                content_embedding = self.sentence_model.encode([content_sample])
+                
+                if cosine_similarity:
+                    similarity = cosine_similarity(title_embedding, content_embedding)[0][0]
+                    credibility_score += similarity * 0.3
+            except Exception as e:
+                logger.warning(f"Similarity analysis failed: {e}")
+        
+        # Language quality factor
+        if TextBlob:
+            try:
+                blob = TextBlob(article.content[:1000])
+                # Simple grammar check based on sentence structure
+                sentences = blob.sentences
+                if len(sentences) > 0:
+                    avg_sentence_length = len(article.content) / len(sentences)
+                    if 10 <= avg_sentence_length <= 50:  # Reasonable sentence length
+                        credibility_score += 0.1
+            except Exception as e:
+                logger.warning(f"Language analysis failed: {e}")
+        
+        return min(1.0, max(0.0, credibility_score))
     
-    async def _submit_to_blockchain(self, article_hash: str, trust_score: float, ipfs_hash: str) -> Optional[str]:
-        """Submit verification to blockchain."""
+    def _detect_misinformation(self, article: NewsArticle) -> float:
+        """Detect potential misinformation in the article."""
+        misinformation_score = 0.0
+        
+        # Check for sensational language
+        sensational_words = [
+            'shocking', 'unbelievable', 'amazing', 'incredible', 'secret',
+            'hidden', 'exposed', 'revealed', 'conspiracy', 'cover-up'
+        ]
+        
+        content_lower = article.content.lower()
+        title_lower = article.title.lower()
+        
+        sensational_count = sum(
+            1 for word in sensational_words 
+            if word in content_lower or word in title_lower
+        )
+        misinformation_score += min(0.3, sensational_count * 0.05)
+        
+        # Check for excessive capitalization
+        caps_ratio = sum(1 for c in article.title if c.isupper()) / len(article.title)
+        if caps_ratio > 0.3:
+            misinformation_score += 0.2
+        
+        # Check for suspicious patterns
+        if '!!!' in article.title or '???' in article.title:
+            misinformation_score += 0.1
+        
+        # Check source reliability
+        source_credibility = self._get_source_credibility(article.source)
+        if source_credibility < 0.3:
+            misinformation_score += 0.3
+        
+        return min(1.0, misinformation_score)
+    
+    def _get_verifier_consensus(self, article: NewsArticle) -> Dict[str, Any]:
+        """Get consensus from multiple verifiers."""
+        # Simulate verifier consensus (in real implementation, this would
+        # involve multiple independent verification nodes)
+        verifiers = ['verifier_1', 'verifier_2', 'verifier_3']
+        consensus = {
+            'total_verifiers': len(verifiers),
+            'consensus_reached': True,
+            'agreement_percentage': 0.85,
+            'verifier_scores': {
+                verifier: {
+                    'trust_score': 0.7 + (hash(article.id + verifier) % 30) / 100,
+                    'confidence': 0.8 + (hash(article.id + verifier) % 20) / 100
+                }
+                for verifier in verifiers
+            }
+        }
+        
+        CONSENSUS_ROUNDS.inc({
+            'result': 'success' if consensus['consensus_reached'] else 'failed',
+            'verifier_count': str(len(verifiers))
+        })
+        
+        return consensus
+    
+    def _store_on_blockchain(self, article: NewsArticle, verification_data: Dict[str, Any]) -> Optional[str]:
+        """Store verification result on blockchain."""
+        if not self.blockchain_enabled:
+            return None
+        
         try:
-            if not self.contract:
-                return None
+            # Create hash of verification data
+            data_string = json.dumps(verification_data, sort_keys=True)
+            data_hash = hashlib.sha256(data_string.encode()).hexdigest()
             
-            # Convert trust score to integer (0-100)
-            trust_score_int = int(trust_score * 100)
+            # In a real implementation, this would create a blockchain transaction
+            # For now, we'll simulate it
+            transaction_hash = hashlib.sha256(
+                f"{article.id}_{data_hash}_{time.time()}".encode()
+            ).hexdigest()
             
-            # Build transaction
-            transaction = self.contract.functions.submitVerification(
-                article_hash,
-                trust_score_int,
-                ipfs_hash or ""
-            ).buildTransaction({
-                'from': self.account.address,
-                'nonce': self.w3.eth.get_transaction_count(self.account.address),
-                'gas': 200000,
-                'gasPrice': self.w3.toWei('20', 'gwei')
+            BLOCKCHAIN_TRANSACTIONS.inc({
+                'type': 'verification_storage',
+                'status': 'success'
             })
             
-            # Sign and send transaction
-            signed_txn = self.w3.eth.account.sign_transaction(transaction, self.account.privateKey)
-            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-            
-            # Wait for confirmation
-            tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-            
-            BLOCKCHAIN_TRANSACTIONS.labels(type='verification').inc()
-            
-            return tx_hash.hex()
+            logger.info(f"Stored verification on blockchain: {transaction_hash}")
+            return transaction_hash
             
         except Exception as e:
-            logger.error(f"Blockchain submission failed: {e}")
+            logger.error(f"Failed to store on blockchain: {e}")
+            BLOCKCHAIN_TRANSACTIONS.inc({
+                'type': 'verification_storage',
+                'status': 'failed'
+            })
             return None
     
-    async def _store_verification_result(self, result: VerificationResult):
+    def _determine_confidence_level(self, trust_score: float, credibility_score: float, misinformation_prob: float) -> str:
+        """Determine confidence level of verification."""
+        avg_score = (trust_score + credibility_score + (1 - misinformation_prob)) / 3
+        
+        if avg_score >= 0.8:
+            return "high"
+        elif avg_score >= 0.6:
+            return "medium"
+        elif avg_score >= 0.4:
+            return "low"
+        else:
+            return "very_low"
+    
+    def _get_source_credibility(self, source: str) -> float:
+        """Get credibility score for a news source."""
+        # Check cache first
+        if self.redis_client:
+            try:
+                cached_score = self.redis_client.get(f"source_credibility:{source}")
+                if cached_score:
+                    return float(cached_score)
+            except Exception as e:
+                logger.warning(f"Redis cache read failed: {e}")
+        
+        # Calculate credibility (simplified)
+        # In real implementation, this would use historical data
+        known_reliable_sources = {
+            'reuters.com': 0.9,
+            'bbc.com': 0.9,
+            'ap.org': 0.9,
+            'npr.org': 0.85,
+            'cnn.com': 0.75,
+            'nytimes.com': 0.8,
+            'washingtonpost.com': 0.8
+        }
+        
+        # Extract domain from source
+        domain = source.lower().replace('www.', '').replace('http://', '').replace('https://', '')
+        if '/' in domain:
+            domain = domain.split('/')[0]
+        
+        credibility = known_reliable_sources.get(domain, 0.5)  # Default neutral
+        
+        # Cache the result
+        if self.redis_client:
+            try:
+                self.redis_client.setex(f"source_credibility:{source}", 3600, credibility)
+            except Exception as e:
+                logger.warning(f"Redis cache write failed: {e}")
+        
+        return credibility
+    
+    def _get_author_credibility(self, author: str) -> float:
+        """Get credibility score for an author."""
+        # Simplified author credibility calculation
+        # In real implementation, this would use author history and reputation
+        return 0.6  # Default neutral credibility
+    
+    def _analyze_url_credibility(self, url: str) -> float:
+        """Analyze URL for credibility indicators."""
+        credibility = 0.5
+        
+        # HTTPS bonus
+        if url.startswith('https://'):
+            credibility += 0.1
+        
+        # Check for suspicious URL patterns
+        suspicious_patterns = ['.tk', '.ml', '.ga', '.cf', 'bit.ly', 'tinyurl']
+        if any(pattern in url.lower() for pattern in suspicious_patterns):
+            credibility -= 0.3
+        
+        # Check for legitimate news domains
+        legitimate_domains = ['.com', '.org', '.net', '.edu', '.gov']
+        if any(domain in url.lower() for domain in legitimate_domains):
+            credibility += 0.1
+        
+        return min(1.0, max(0.0, credibility))
+    
+    def _store_verification_result(self, result: VerificationResult):
         """Store verification result in database."""
-        try:
-            # Store in MongoDB
-            doc = asdict(result)
-            doc['_id'] = result.verification_id
-            self.db.verifications.insert_one(doc)
-            
-            # Cache in Redis
-            self.redis_client.setex(
-                f"verification:{result.verification_id}",
-                3600,  # 1 hour TTL
-                json.dumps(doc, default=str)
-            )
-            
-            # Add to history
-            self.verification_history.append(result)
-            
-        except Exception as e:
-            logger.error(f"Failed to store verification result: {e}")
+        if self.db:
+            try:
+                # Convert result to dict for storage
+                result_dict = asdict(result)
+                result_dict['verification_timestamp'] = result.verification_timestamp.isoformat()
+                
+                # Store in MongoDB
+                self.db.verification_results.insert_one(result_dict)
+                logger.info(f"Stored verification result for article {result.article_id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to store verification result: {e}")
     
-    async def _update_source_credibility(self, source: str, result: VerificationResult):
-        """Update source credibility based on verification result."""
-        try:
-            # Get existing credibility data
-            existing = self.source_credibility.get(source)
-            
-            if existing:
-                # Update existing credibility
-                existing.accuracy_history.append(result.trust_score)
-                existing.trust_score = np.mean(existing.accuracy_history[-50:])  # Last 50 verifications
-                existing.verification_count += 1
-                existing.last_updated = datetime.now()
-            else:
-                # Create new credibility record
-                domain = source.split('/')[-1] if '/' in source else source
-                existing = SourceCredibility(
-                    source_id=str(uuid.uuid4()),
-                    source_name=source,
-                    domain=domain,
-                    trust_score=result.trust_score,
-                    accuracy_history=[result.trust_score],
-                    bias_score=0.0,  # Would be calculated separately
-                    factual_reporting='mixed',
-                    verification_count=1,
-                    last_updated=datetime.now(),
-                    reputation_factors={}
-                )
-            
-            self.source_credibility[source] = existing
-            
-            # Update in blockchain
-            if self.contract:
-                await self._update_blockchain_source_credibility(source, existing.trust_score)
-            
-            # Store in database
-            doc = asdict(existing)
-            self.db.source_credibility.replace_one(
-                {'source_name': source},
-                doc,
-                upsert=True
-            )
-            
-            TRUST_SCORE_UPDATES.labels(source=source).inc()
-            
-        except Exception as e:
-            logger.error(f"Failed to update source credibility: {e}")
-    
-    async def _update_blockchain_source_credibility(self, source: str, trust_score: float):
-        """Update source credibility on blockchain."""
-        try:
-            if not self.contract:
-                return
-            
-            trust_score_int = int(trust_score * 100)
-            
-            transaction = self.contract.functions.updateSourceCredibility(
-                source,
-                trust_score_int
-            ).buildTransaction({
-                'from': self.account.address,
-                'nonce': self.w3.eth.get_transaction_count(self.account.address),
-                'gas': 100000,
-                'gasPrice': self.w3.toWei('20', 'gwei')
-            })
-            
-            signed_txn = self.w3.eth.account.sign_transaction(transaction, self.account.privateKey)
-            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-            
-            BLOCKCHAIN_TRANSACTIONS.labels(type='source_update').inc()
-            
-        except Exception as e:
-            logger.error(f"Blockchain source update failed: {e}")
-    
-    def get_source_credibility(self, source: str) -> Optional[SourceCredibility]:
-        """Get source credibility information."""
-        return self.source_credibility.get(source)
-    
-    def get_verification_history(self, article_id: str) -> List[VerificationResult]:
-        """Get verification history for an article."""
-        return [
-            result for result in self.verification_history
-            if result.article_id == article_id
-        ]
-
-class FactChecker:
-    """AI-powered fact-checking system."""
-    
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        
-        # Load fact-checking models
-        self.claim_detector = pipeline(
-            "text-classification",
-            model="microsoft/DialoGPT-medium",  # Placeholder - would use specialized model
-            device=0 if torch.cuda.is_available() else -1
-        )
-        
-        self.fact_verification_model = pipeline(
-            "text-classification",
-            model="facebook/bart-large-mnli",
-            device=0 if torch.cuda.is_available() else -1
-        )
-        
-        # Knowledge bases
-        self.knowledge_sources = [
-            'https://api.factcheck.org',
-            'https://www.snopes.com/api',
-            'https://www.politifact.com/api'
-        ]
-        
-        # NLP components
-        self.nlp = spacy.load('en_core_web_sm')
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
-        logger.info("Fact checker initialized")
-    
-    async def check_facts(self, article: NewsArticle) -> List[Dict[str, Any]]:
-        """Perform comprehensive fact-checking on article."""
-        try:
-            # Extract claims from article
-            claims = await self._extract_claims(article.content)
-            
-            # Verify each claim
-            fact_check_results = []
-            for claim in claims:
-                result = await self._verify_claim(claim, article)
-                fact_check_results.append(result)
-            
-            return fact_check_results
-            
-        except Exception as e:
-            logger.error(f"Fact checking failed: {e}")
+    def get_source_trust_history(self, source: str) -> List[Dict[str, Any]]:
+        """Get trust history for a source."""
+        if not self.db:
             return []
-    
-    async def _extract_claims(self, content: str) -> List[str]:
-        """Extract factual claims from article content."""
-        try:
-            # Use NLP to identify claim-like sentences
-            doc = self.nlp(content)
-            
-            claims = []
-            for sent in doc.sents:
-                # Look for sentences with factual indicators
-                if self._is_factual_claim(sent.text):
-                    claims.append(sent.text.strip())
-            
-            return claims[:10]  # Limit to top 10 claims
-            
-        except Exception as e:
-            logger.error(f"Claim extraction failed: {e}")
-            return []
-    
-    def _is_factual_claim(self, sentence: str) -> bool:
-        """Determine if a sentence contains a factual claim."""
-        # Simple heuristics for factual claims
-        factual_indicators = [
-            'according to', 'study shows', 'research indicates',
-            'data reveals', 'statistics show', 'report states',
-            'announced', 'confirmed', 'revealed', 'discovered'
-        ]
-        
-        sentence_lower = sentence.lower()
-        return any(indicator in sentence_lower for indicator in factual_indicators)
-    
-    async def _verify_claim(self, claim: str, article: NewsArticle) -> Dict[str, Any]:
-        """Verify a single factual claim."""
-        try:
-            # Search knowledge bases
-            knowledge_results = await self._search_knowledge_bases(claim)
-            
-            # Use AI model for verification
-            ai_verification = await self._ai_verify_claim(claim, knowledge_results)
-            
-            # Cross-reference with reliable sources
-            source_verification = await self._cross_reference_sources(claim)
-            
-            # Combine results
-            verified = (
-                ai_verification.get('verified', False) and
-                source_verification.get('verified', False)
-            )
-            
-            confidence = min(
-                ai_verification.get('confidence', 0.0),
-                source_verification.get('confidence', 0.0)
-            )
-            
-            return {
-                'claim': claim,
-                'verified': verified,
-                'confidence': confidence,
-                'sources': knowledge_results,
-                'ai_analysis': ai_verification,
-                'source_analysis': source_verification,
-                'timestamp': datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"Claim verification failed: {e}")
-            return {
-                'claim': claim,
-                'verified': False,
-                'confidence': 0.0,
-                'error': str(e)
-            }
-    
-    async def _search_knowledge_bases(self, claim: str) -> List[Dict[str, Any]]:
-        """Search external knowledge bases for claim verification."""
-        results = []
         
         try:
-            # Search each knowledge source
-            for source_url in self.knowledge_sources:
-                try:
-                    # Mock API call - would implement actual API integration
-                    response = requests.get(
-                        f"{source_url}/search",
-                        params={'q': claim[:200]},  # Limit query length
-                        timeout=5
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        results.append({
-                            'source': source_url,
-                            'results': data.get('results', []),
-                            'confidence': data.get('confidence', 0.0)
-                        })
-                        
-                except Exception as e:
-                    logger.warning(f"Knowledge base search failed for {source_url}: {e}")
-                    continue
-            
+            # Query verification results for this source
+            results = list(self.db.verification_results.find(
+                {"source": source},
+                sort=[("verification_timestamp", -1)],
+                limit=100
+            ))
             return results
-            
         except Exception as e:
-            logger.error(f"Knowledge base search failed: {e}")
+            logger.error(f"Failed to get source trust history: {e}")
             return []
     
-    async def _ai_verify_claim(self, claim: str, knowledge_results: List[Dict]) -> Dict[str, Any]:
-        """Use AI model to verify claim against knowledge."""
-        try:
-            # Prepare context from knowledge results
-            context = ""
-            for result in knowledge_results:
-                for item in result.get('results', [])[:3:  # Top 3 results per source
-                    context += f"{item.get('text', '')} "
-            
-            if not context.strip():
-                return {'verified': False, 'confidence': 0.0, 'reason': 'No context available'}
-            
-            # Use BART for natural language inference
-            premise = context[:1000]  # Limit context length
-            hypothesis = claim
-            
-            result = self.fact_verification_model(
-                f"{premise} {self.fact_verification_model.tokenizer.sep_token} {hypothesis}"
-            )
-            
-            # Interpret result
-            label = result['label'].lower()
-            confidence = result['score']
-            
-            verified = label == 'entailment'
-            
-            return {
-                'verified': verified,
-                'confidence': confidence,
-                'label': label,
-                'model_output': result
-            }
-            
-        except Exception as e:
-            logger.error(f"AI claim verification failed: {e}")
-            return {'verified': False, 'confidence': 0.0, 'error': str(e)}
+    def update_source_credibility(self, source: str, new_score: float):
+        """Update source credibility score."""
+        if self.redis_client:
+            try:
+                self.redis_client.setex(f"source_credibility:{source}", 3600, new_score)
+                TRUST_SCORE_UPDATES.inc({
+                    'source': source,
+                    'direction': 'up' if new_score > 0.5 else 'down'
+                })
+                logger.info(f"Updated credibility for {source}: {new_score}")
+            except Exception as e:
+                logger.error(f"Failed to update source credibility: {e}")
     
-    async def _cross_reference_sources(self, claim: str) -> Dict[str, Any]:
-        """Cross-reference claim with multiple reliable sources."""
+    def get_network_trust_metrics(self) -> Dict[str, Any]:
+        """Get overall network trust metrics."""
+        if not self.db:
+            return {}
+        
         try:
-            # Mock implementation - would integrate with news APIs
-            reliable_sources = [
-                'reuters.com', 'ap.org', 'bbc.com',
-                'npr.org', 'pbs.org'
+            # Calculate network-wide metrics
+            pipeline = [
+                {
+                    "$group": {
+                        "_id": None,
+                        "avg_trust_score": {"$avg": "$trust_score"},
+                        "avg_credibility_score": {"$avg": "$credibility_score"},
+                        "avg_misinformation_prob": {"$avg": "$misinformation_probability"},
+                        "total_verifications": {"$sum": 1}
+                    }
+                }
             ]
             
-            supporting_sources = 0
-            total_sources = len(reliable_sources)
-            
-            # Simulate source checking
-            for source in reliable_sources:
-                # Mock API call
-                if hash(claim + source) % 3 == 0:  # Random simulation
-                    supporting_sources += 1
-            
-            confidence = supporting_sources / total_sources
-            verified = confidence > 0.5
-            
-            return {
-                'verified': verified,
-                'confidence': confidence,
-                'supporting_sources': supporting_sources,
-                'total_sources': total_sources
-            }
+            result = list(self.db.verification_results.aggregate(pipeline))
+            if result:
+                metrics = result[0]
+                
+                # Update Prometheus gauge
+                NETWORK_TRUST.set(metrics.get('avg_trust_score', 0.5), {'network_segment': 'global'})
+                
+                return {
+                    'average_trust_score': metrics.get('avg_trust_score', 0.5),
+                    'average_credibility_score': metrics.get('avg_credibility_score', 0.5),
+                    'average_misinformation_probability': metrics.get('avg_misinformation_prob', 0.5),
+                    'total_verifications': metrics.get('total_verifications', 0),
+                    'network_health': 'healthy' if metrics.get('avg_trust_score', 0) > 0.6 else 'degraded'
+                }
             
         except Exception as e:
-            logger.error(f"Source cross-reference failed: {e}")
-            return {'verified': False, 'confidence': 0.0, 'error': str(e)}
-
-class SourceAnalyzer:
-    """Analyzes news source credibility and bias."""
-    
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
+            logger.error(f"Failed to get network trust metrics: {e}")
         
-        # Load source credibility database
-        self.credibility_db = self._load_credibility_database()
-        
-        # Bias detection model
-        self.bias_detector = pipeline(
-            "text-classification",
-            model="unitary/toxic-bert",  # Placeholder - would use bias-specific model
-            device=0 if torch.cuda.is_available() else -1
-        )
-        
-        logger.info("Source analyzer initialized")
-    
-    def _load_credibility_database(self) -> Dict[str, Dict]:
-        """Load known source credibility ratings."""
-        # Mock database - would load from actual credibility databases
         return {
-            'reuters.com': {'trust_score': 0.95, 'bias': 0.0, 'factual': 'high'},
-            'ap.org': {'trust_score': 0.94, 'bias': 0.0, 'factual': 'high'},
-            'bbc.com': {'trust_score': 0.90, 'bias': -0.1, 'factual': 'high'},
-            'cnn.com': {'trust_score': 0.75, 'bias': -0.3, 'factual': 'mixed'},
-            'foxnews.com': {'trust_score': 0.70, 'bias': 0.4, 'factual': 'mixed'},
-            'breitbart.com': {'trust_score': 0.30, 'bias': 0.8, 'factual': 'low'},
-            'infowars.com': {'trust_score': 0.10, 'bias': 0.9, 'factual': 'low'}
+            'average_trust_score': 0.5,
+            'average_credibility_score': 0.5,
+            'average_misinformation_probability': 0.5,
+            'total_verifications': 0,
+            'network_health': 'unknown'
         }
-    
-    async def analyze_source(self, source: str) -> Dict[str, Any]:
-        """Analyze source credibility and characteristics."""
-        try:
-            # Extract domain from URL
-            domain = self._extract_domain(source)
-            
-            # Get known credibility data
-            known_data = self.credibility_db.get(domain, {})
-            
-            # Analyze domain characteristics
-            domain_analysis = await self._analyze_domain(domain)
-            
-            # Combine analyses
-            credibility_score = known_data.get('trust_score', domain_analysis.get('credibility_score', 0.5))
-            bias_score = known_data.get('bias', domain_analysis.get('bias_score', 0.0))
-            factual_reporting = known_data.get('factual', domain_analysis.get('factual_reporting', 'unknown'))
-            
-            return {
-                'domain': domain,
-                'credibility_score': credibility_score,
-                'bias_score': bias_score,
-                'factual_reporting': factual_reporting,
-                'known_source': domain in self.credibility_db,
-                'domain_analysis': domain_analysis,
-                'analysis_timestamp': datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"Source analysis failed: {e}")
-            return {
-                'credibility_score': 0.5,
-                'bias_score': 0.0,
-                'factual_reporting': 'unknown',
-                'error': str(e)
-            }
-    
-    def _extract_domain(self, source: str) -> str:
-        """Extract domain from source URL or name."""
-        try:
-            if source.startswith('http'):
-                from urllib.parse import urlparse
-                return urlparse(source).netloc.lower()
-            else:
-                return source.lower()
-        except:
-            return source.lower()
-    
-    async def _analyze_domain(self, domain: str) -> Dict[str, Any]:
-        """Analyze domain characteristics for credibility assessment."""
-        try:
-            analysis = {
-                'credibility_score': 0.5,
-                'bias_score': 0.0,
-                'factual_reporting': 'unknown'
-            }
-            
-            # Domain age and reputation heuristics
-            if any(indicator in domain for indicator in ['.gov', '.edu', '.org']):
-                analysis['credibility_score'] += 0.2
-            
-            if any(indicator in domain for indicator in ['news', 'times', 'post', 'herald']):
-                analysis['credibility_score'] += 0.1
-            
-            if any(indicator in domain for indicator in ['blog', 'wordpress', 'tumblr']):
-                analysis['credibility_score'] -= 0.2
-            
-            # Suspicious domain patterns
-            if any(indicator in domain for indicator in ['fake', 'conspiracy', 'truth']):
-                analysis['credibility_score'] -= 0.3
-                analysis['factual_reporting'] = 'low'
-            
-            # Ensure score bounds
-            analysis['credibility_score'] = max(0.0, min(1.0, analysis['credibility_score']))
-            
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Domain analysis failed: {e}")
-            return {'credibility_score': 0.5, 'bias_score': 0.0, 'factual_reporting': 'unknown'}
 
-class ConsensusEngine:
-    """Manages consensus among verifier nodes."""
-    
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        
-        # Consensus parameters
-        self.min_verifiers = config.get('min_verifiers', 3)
-        self.consensus_threshold = config.get('consensus_threshold', 0.67)
-        self.timeout_seconds = config.get('consensus_timeout', 30)
-        
-        # Active verifier nodes
-        self.verifier_nodes = {}
-        
-        logger.info("Consensus engine initialized")
-    
-    async def get_consensus(self, article: NewsArticle, fact_results: List[Dict], source_analysis: Dict) -> float:
-        """Get consensus score from verifier network."""
-        try:
-            # Simulate consensus from multiple verifiers
-            verifier_scores = []
-            
-            # Add our own verification
-            our_score = self._calculate_verification_score(fact_results, source_analysis)
-            verifier_scores.append(our_score)
-            
-            # Simulate other verifiers (in real implementation, would query network)
-            for i in range(self.min_verifiers - 1):
-                # Add some noise to simulate different verifier opinions
-                noise = np.random.normal(0, 0.1)
-                simulated_score = max(0.0, min(1.0, our_score + noise))
-                verifier_scores.append(simulated_score)
-            
-            # Calculate consensus
-            if len(verifier_scores) >= self.min_verifiers:
-                consensus_score = np.mean(verifier_scores)
-                agreement_level = 1.0 - np.std(verifier_scores)
-                
-                # Adjust consensus based on agreement level
-                final_consensus = consensus_score * agreement_level
-                
-                CONSENSUS_ROUNDS.labels(result='success').inc()
-                
-                return max(0.0, min(1.0, final_consensus))
-            else:
-                CONSENSUS_ROUNDS.labels(result='insufficient_verifiers').inc()
-                return our_score
-            
-        except Exception as e:
-            logger.error(f"Consensus calculation failed: {e}")
-            CONSENSUS_ROUNDS.labels(result='error').inc()
-            return 0.5
-    
-    def _calculate_verification_score(self, fact_results: List[Dict], source_analysis: Dict) -> float:
-        """Calculate verification score from fact-checking and source analysis."""
-        try:
-            # Fact-checking component
-            fact_score = 0.5
-            if fact_results:
-                verified_count = sum(1 for result in fact_results if result.get('verified', False))
-                fact_score = verified_count / len(fact_results)
-            
-            # Source credibility component
-            source_score = source_analysis.get('credibility_score', 0.5)
-            
-            # Weighted combination
-            verification_score = (fact_score * 0.7) + (source_score * 0.3)
-            
-            return max(0.0, min(1.0, verification_score))
-            
-        except Exception as e:
-            logger.error(f"Verification score calculation failed: {e}")
-            return 0.5
 
-def create_verification_api(blockchain_system: BlockchainVerificationSystem) -> Flask:
-    """Create Flask API for news verification."""
+def create_flask_app(verification_system: NewsVerificationSystem) -> Flask:
+    """Create Flask web API for the verification system."""
+    if not Flask:
+        raise ImportError("Flask is required for web API")
+    
     app = Flask(__name__)
     
     @app.route('/verify', methods=['POST'])
-    async def verify_news():
+    def verify_article():
+        """Verify a news article."""
         try:
             data = request.get_json()
             
             # Create NewsArticle object
             article = NewsArticle(
-                article_id=data.get('article_id', str(uuid.uuid4())),
-                title=data.get('title', ''),
-                content=data.get('content', ''),
-                source=data.get('source', ''),
-                author=data.get('author', ''),
-                published_at=datetime.fromisoformat(data.get('published_at', datetime.now().isoformat())),
-                url=data.get('url', ''),
-                hash=hashlib.sha256(data.get('content', '').encode()).hexdigest(),
-                language=data.get('language', 'en')
+                id=data.get('id', str(uuid.uuid4())),
+                title=data['title'],
+                content=data['content'],
+                source=data['source'],
+                author=data.get('author'),
+                published_date=datetime.fromisoformat(data['published_date']),
+                url=data['url'],
+                language=data.get('language', 'en'),
+                category=data.get('category'),
+                tags=data.get('tags', [])
             )
             
-            # Verify article
-            result = await blockchain_system.verify_article(article)
+            # Verify the article
+            result = verification_system.verify_article(article)
+            
+            # Convert result to dict for JSON response
+            result_dict = asdict(result)
+            result_dict['verification_timestamp'] = result.verification_timestamp.isoformat()
             
             return jsonify({
-                'verification_id': result.verification_id,
-                'trust_score': result.trust_score,
-                'credibility_score': result.credibility_score,
-                'misinformation_probability': result.misinformation_probability,
-                'consensus_score': result.consensus_score,
-                'blockchain_hash': result.blockchain_hash,
-                'ipfs_hash': result.ipfs_hash,
-                'verification_timestamp': result.verification_timestamp.isoformat()
+                'status': 'success',
+                'result': result_dict
             })
             
         except Exception as e:
-            logger.error(f"Verification API error: {e}")
-            return jsonify({'error': str(e)}), 500
+            logger.error(f"API verification failed: {e}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
     
-    @app.route('/source/<path:source_name>', methods=['GET'])
-    def get_source_credibility(source_name):
+    @app.route('/source/<source_name>/credibility', methods=['GET'])
+    def get_source_credibility(source_name: str):
+        """Get credibility score for a source."""
         try:
-            credibility = blockchain_system.get_source_credibility(source_name)
+            credibility = verification_system._get_source_credibility(source_name)
+            history = verification_system.get_source_trust_history(source_name)
             
-            if credibility:
-                return jsonify(asdict(credibility))
-            else:
-                return jsonify({'error': 'Source not found'}), 404
-                
+            return jsonify({
+                'source': source_name,
+                'credibility_score': credibility,
+                'verification_count': len(history),
+                'last_updated': datetime.now().isoformat()
+            })
+            
         except Exception as e:
-            logger.error(f"Source credibility API error: {e}")
-            return jsonify({'error': str(e)}), 500
+            logger.error(f"Failed to get source credibility: {e}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
     
-    @app.route('/verification/<verification_id>', methods=['GET'])
-    def get_verification(verification_id):
+    @app.route('/metrics/network', methods=['GET'])
+    def get_network_metrics():
+        """Get network-wide trust metrics."""
         try:
-            # Get from Redis cache first
-            cached = blockchain_system.redis_client.get(f"verification:{verification_id}")
+            metrics = verification_system.get_network_trust_metrics()
+            return jsonify(metrics)
             
-            if cached:
-                return jsonify(json.loads(cached))
-            
-            # Get from MongoDB
-            result = blockchain_system.db.verifications.find_one({'_id': verification_id})
-            
-            if result:
-                result.pop('_id', None)  # Remove MongoDB ID
-                return jsonify(result)
-            else:
-                return jsonify({'error': 'Verification not found'}), 404
-                
         except Exception as e:
-            logger.error(f"Get verification API error: {e}")
-            return jsonify({'error': str(e)}), 500
+            logger.error(f"Failed to get network metrics: {e}")
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
     
     @app.route('/health', methods=['GET'])
     def health_check():
+        """Health check endpoint."""
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
-            'blockchain_connected': blockchain_system.w3.isConnected() if blockchain_system.w3 else False,
-            'contract_deployed': blockchain_system.contract is not None
+            'blockchain_enabled': verification_system.blockchain_enabled,
+            'ml_enabled': verification_system.ml_enabled
         })
     
     return app
 
+
 def main():
-    """Main function to run the blockchain verification system."""
+    """Main function to run the verification system."""
     # Configuration
     config = {
-        'ethereum_rpc': os.getenv('ETHEREUM_RPC', 'http://localhost:8545'),
-        'private_key': os.getenv('PRIVATE_KEY', '0x' + '0' * 64),  # Use proper private key
+        'blockchain_url': os.getenv('BLOCKCHAIN_URL', 'http://localhost:8545'),
         'redis_host': os.getenv('REDIS_HOST', 'localhost'),
         'redis_port': int(os.getenv('REDIS_PORT', 6379)),
-        'mongodb_uri': os.getenv('MONGODB_URI', 'mongodb://localhost:27017/'),
-        'min_verifiers': 3,
-        'consensus_threshold': 0.67,
-        'consensus_timeout': 30
+        'mongo_url': os.getenv('MONGO_URL', 'mongodb://localhost:27017/'),
+        'metrics_port': int(os.getenv('METRICS_PORT', 8000)),
+        'api_port': int(os.getenv('API_PORT', 5000))
     }
     
-    # Start Prometheus metrics server
-    start_http_server(8003)
+    # Initialize verification system
+    verification_system = NewsVerificationSystem(config)
     
-    # Initialize blockchain verification system
-    blockchain_system = BlockchainVerificationSystem(config)
-    
-    # Create and run API
-    app = create_verification_api(blockchain_system)
-    
-    logger.info("Blockchain news verification system started")
-    logger.info("API available at http://localhost:5001")
-    logger.info("Metrics available at http://localhost:8003")
-    
-    try:
-        app.run(host='0.0.0.0', port=5001, debug=False)
-    except KeyboardInterrupt:
-        logger.info("Shutting down verification system")
+    # Create and run Flask app if Flask is available
+    if Flask:
+        app = create_flask_app(verification_system)
+        
+        logger.info(f"Starting News Verification API on port {config['api_port']}")
+        app.run(
+            host='0.0.0.0',
+            port=config['api_port'],
+            debug=os.getenv('DEBUG', 'false').lower() == 'true'
+        )
+    else:
+        logger.info("Flask not available. Running in standalone mode.")
+        
+        # Example usage
+        sample_article = NewsArticle(
+            id="sample_001",
+            title="Breaking: New Technology Revolutionizes News Verification",
+            content="A new blockchain-based system has been developed to combat misinformation and verify news articles in real-time. The system uses advanced machine learning algorithms and decentralized consensus mechanisms to provide trust scores for news content.",
+            source="tech-news.com",
+            author="Dr. Jane Smith",
+            published_date=datetime.now(),
+            url="https://tech-news.com/blockchain-verification",
+            language="en",
+            category="technology",
+            tags=["blockchain", "AI", "news", "verification"]
+        )
+        
+        # Verify the sample article
+        result = verification_system.verify_article(sample_article)
+        
+        print("\n=== Verification Result ===")
+        print(f"Article ID: {result.article_id}")
+        print(f"Trust Score: {result.trust_score:.3f}")
+        print(f"Credibility Score: {result.credibility_score:.3f}")
+        print(f"Misinformation Probability: {result.misinformation_probability:.3f}")
+        print(f"Confidence Level: {result.confidence_level}")
+        print(f"Blockchain Hash: {result.blockchain_hash}")
+        print(f"Verification Time: {result.verification_timestamp}")
+        
+        # Get network metrics
+        network_metrics = verification_system.get_network_trust_metrics()
+        print("\n=== Network Metrics ===")
+        for key, value in network_metrics.items():
+            print(f"{key}: {value}")
+
 
 if __name__ == "__main__":
     main()

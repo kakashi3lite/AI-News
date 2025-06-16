@@ -1,0 +1,171 @@
+# Dr. Orion TestMaster Vanguard - Prometheus Configuration
+# Superhuman QA Monitoring & Alerting
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'superhuman-qa-monitor'
+    environment: 'production'
+
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # QA Orchestrator Metrics
+  - job_name: 'qa-orchestrator'
+    static_configs:
+      - targets: ['localhost:8080']
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'qa-orchestrator'
+
+  # Monitoring Dashboard Metrics
+  - job_name: 'qa-monitoring-dashboard'
+    static_configs:
+      - targets: ['localhost:5000']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'monitoring-dashboard'
+
+  # AI News Dashboard Application
+  - job_name: 'ai-news-dashboard'
+    static_configs:
+      - targets: ['localhost:3000']
+    scrape_interval: 15s
+    metrics_path: '/api/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ai-news-dashboard'
+
+  # Redis Cache Metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['localhost:9121']
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'redis-cache'
+
+  # Vector Database Metrics (Pinecone/Weaviate)
+  - job_name: 'vector-db'
+    static_configs:
+      - targets: ['localhost:8080']
+    scrape_interval: 30s
+    metrics_path: '/v1/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'vector-database'
+
+  # Node Exporter for System Metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'qa-system'
+
+  # Selenium Grid Metrics
+  - job_name: 'selenium-grid'
+    static_configs:
+      - targets: ['localhost:4444']
+    scrape_interval: 30s
+    metrics_path: '/grid/api/hub/status'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'selenium-grid'
+
+  # Chaos Engineering Metrics
+  - job_name: 'chaos-experiments'
+    static_configs:
+      - targets: ['localhost:8081']
+    scrape_interval: 10s
+    metrics_path: '/chaos/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'chaos-engineering'
+
+  # AI Model Performance Metrics
+  - job_name: 'ai-models'
+    static_configs:
+      - targets: ['localhost:8082']
+    scrape_interval: 20s
+    metrics_path: '/ai/metrics'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ai-inference'
+
+  # Custom QA Test Metrics
+  - job_name: 'qa-tests'
+    file_sd_configs:
+      - files:
+        - 'targets/*.json'
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__meta_filepath]
+        target_label: test_suite
+        regex: '.*/(.+)\.json'
+        replacement: '${1}'
+
+  # Blackbox Exporter for External Endpoint Monitoring
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://localhost:3000/api/health
+        - http://localhost:3000/api/news
+        - http://localhost:3000/api/summarize
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+
+# Remote Write Configuration for Long-term Storage
+remote_write:
+  - url: "http://localhost:9090/api/v1/write"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Storage Configuration
+storage:
+  tsdb:
+    path: /prometheus/data
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true
+
+# Feature Flags
+feature_flags:
+  - promql-at-modifier
+  - remote-write-receiver
+  - exemplar-storage

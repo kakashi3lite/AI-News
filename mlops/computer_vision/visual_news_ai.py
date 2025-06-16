@@ -52,35 +52,50 @@ from urllib.parse import urlparse
 import requests
 
 # Computer vision libraries
-import cv2
-from PIL import Image, ImageDraw, ImageFont
-import matplotlib.pyplot as plt
-import seaborn as sns
-from skimage import feature, measure, segmentation
-from skimage.filters import gaussian
-from skimage.transform import resize
+try:
+    import cv2
+    from PIL import Image, ImageDraw, ImageFont
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from skimage import feature, measure, segmentation
+    from skimage.filters import gaussian
+    from skimage.transform import resize
+    CV_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Computer vision libraries not available: {e}")
+    CV_AVAILABLE = False
 
 # Deep learning frameworks
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset, random_split
-from torch.cuda.amp import autocast, GradScaler
-from torchvision import transforms, models
-from torchvision.models import detection
-import torchvision.transforms.functional as TF
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    import torch.nn.functional as F
+    from torch.utils.data import DataLoader, Dataset, random_split
+    from torch.cuda.amp import autocast, GradScaler
+    from torchvision import transforms, models
+    from torchvision.models import detection
+    import torchvision.transforms.functional as TF
+    TORCH_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"PyTorch not available: {e}")
+    TORCH_AVAILABLE = False
 
 # Transformers and multimodal models
-from transformers import (
-    AutoTokenizer, AutoModel, AutoConfig, AutoProcessor,
-    CLIPModel, CLIPProcessor, CLIPTokenizer,
-    BlipProcessor, BlipForConditionalGeneration,
-    ViTModel, ViTFeatureExtractor,
-    DPTForDepthEstimation, DPTFeatureExtractor,
-    DetrImageProcessor, DetrForObjectDetection
-)
-from sentence_transformers import SentenceTransformer
+try:
+    from transformers import (
+        AutoTokenizer, AutoModel, AutoConfig, AutoProcessor,
+        CLIPModel, CLIPProcessor, CLIPTokenizer,
+        BlipProcessor, BlipForConditionalGeneration,
+        ViTModel, ViTFeatureExtractor,
+        DPTForDepthEstimation, DPTFeatureExtractor,
+        DetrImageProcessor, DetrForObjectDetection
+    )
+    from sentence_transformers import SentenceTransformer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Transformers library not available: {e}")
+    TRANSFORMERS_AVAILABLE = False
 
 # Video processing
 try:
@@ -203,6 +218,9 @@ class VisionTransformerClassifier(nn.Module):
     
     def __init__(self, num_classes: int, config: Dict[str, Any]):
         super().__init__()
+        if not TORCH_AVAILABLE or not TRANSFORMERS_AVAILABLE:
+            raise ImportError("PyTorch and Transformers are required for ViT classification")
+            
         self.config = config
         
         # Load pre-trained ViT
@@ -244,6 +262,9 @@ class MultimodalCLIPAnalyzer:
     """CLIP-based multimodal analyzer for visual-textual alignment."""
     
     def __init__(self, config: Dict[str, Any]):
+        if not TORCH_AVAILABLE or not TRANSFORMERS_AVAILABLE:
+            raise ImportError("PyTorch and Transformers are required for CLIP analysis")
+            
         self.config = config
         
         # Load CLIP model
@@ -380,6 +401,9 @@ class ObjectDetector:
     """Advanced object detection using DETR and other models."""
     
     def __init__(self, config: Dict[str, Any]):
+        if not TORCH_AVAILABLE or not TRANSFORMERS_AVAILABLE:
+            raise ImportError("PyTorch and Transformers are required for object detection")
+            
         self.config = config
         
         # Load DETR model
@@ -1014,16 +1038,40 @@ class VisualNewsAI:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         
-        # Initialize components
-        self.clip_analyzer = MultimodalCLIPAnalyzer(config)
-        self.object_detector = ObjectDetector(config)
-        self.video_analyzer = VideoAnalyzer(config)
-        self.deepfake_detector = DeepfakeDetector(config)
+        # Initialize components with dependency checks
+        try:
+            self.clip_analyzer = MultimodalCLIPAnalyzer(config) if TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE else None
+        except ImportError as e:
+            logger.warning(f"CLIP analyzer not available: {e}")
+            self.clip_analyzer = None
+            
+        try:
+            self.object_detector = ObjectDetector(config) if TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE else None
+        except ImportError as e:
+            logger.warning(f"Object detector not available: {e}")
+            self.object_detector = None
+            
+        try:
+            self.video_analyzer = VideoAnalyzer(config) if CV_AVAILABLE else None
+        except ImportError as e:
+            logger.warning(f"Video analyzer not available: {e}")
+            self.video_analyzer = None
+            
+        try:
+            self.deepfake_detector = DeepfakeDetector(config) if TORCH_AVAILABLE and CV_AVAILABLE else None
+        except ImportError as e:
+            logger.warning(f"Deepfake detector not available: {e}")
+            self.deepfake_detector = None
+            
         self.ocr_extractor = OCRTextExtractor(config)
         
         # Initialize ViT classifier
-        num_classes = config.get('num_classes', 10)
-        self.vit_classifier = VisionTransformerClassifier(num_classes, config)
+        try:
+            num_classes = config.get('num_classes', 10)
+            self.vit_classifier = VisionTransformerClassifier(num_classes, config) if TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE else None
+        except ImportError as e:
+            logger.warning(f"ViT classifier not available: {e}")
+            self.vit_classifier = None
         
         # Cache for processed content
         self.analysis_cache = {}
@@ -1070,15 +1118,15 @@ class VisualNewsAI:
             
             # Object detection
             VISION_REQUESTS.labels(task_type='object_detection').inc()
-            objects = self.object_detector.detect_objects(image)
+            objects = self.object_detector.detect_objects(image) if self.object_detector else []
             
             # Scene description using CLIP
             VISION_REQUESTS.labels(task_type='scene_description').inc()
-            scene_description = self.clip_analyzer.generate_image_description(image)
+            scene_description = self.clip_analyzer.generate_image_description(image) if self.clip_analyzer else "Scene description not available"
             
             # Text extraction
-            VISION_REQUESTS.labels(task_type='ocr').inc()
-            text_content = self.ocr_extractor.extract_text(image)
+            VISION_REQUESTS.labels(task_type='text_extraction').inc()
+            text_content = self.ocr_extractor.extract_text(image) if self.ocr_extractor else []
             extracted_text = [item['text'] for item in text_content]
             
             # Visual sentiment analysis
@@ -1101,9 +1149,13 @@ class VisualNewsAI:
             composition_analysis = self._analyze_composition(image)
             
             # Authenticity analysis
-            authenticity_results = self.deepfake_detector.analyze_image_authenticity(image)
-            deepfake_probability = authenticity_results.get('deepfake_probability', 0.0)
-            authenticity_score = authenticity_results.get('authenticity_score', 0.5)
+            if self.deepfake_detector:
+                authenticity_results = self.deepfake_detector.analyze_image_authenticity(image)
+                deepfake_probability = authenticity_results.get('deepfake_probability', 0.0)
+                authenticity_score = authenticity_results.get('authenticity_score', 0.5)
+            else:
+                deepfake_probability = 0.0
+                authenticity_score = 0.5
             
             # Geolocation analysis (if available)
             geolocation = self._analyze_geolocation(image) if GEO_AVAILABLE else None
@@ -1174,6 +1226,9 @@ class VisualNewsAI:
     def _analyze_visual_sentiment(self, image: Image.Image) -> float:
         """Analyze visual sentiment of image."""
         try:
+            if not self.clip_analyzer:
+                return 0.0
+                
             # Use CLIP to compare with sentiment-related descriptions
             positive_descriptions = [
                 "happy people", "celebration", "success", "joy", "positive news",
@@ -1287,6 +1342,9 @@ class VisualNewsAI:
     def _detect_landmarks(self, image: Image.Image) -> List[str]:
         """Detect landmarks in image using CLIP."""
         try:
+            if not self.clip_analyzer:
+                return []
+                
             # Common landmarks to check
             landmarks = [
                 "Eiffel Tower", "Statue of Liberty", "Big Ben", "Taj Mahal",
@@ -1590,7 +1648,7 @@ def main():
     vision_ai = VisualNewsAI(config)
     
     # Create API
-    app = create_vision_ai(vision_ai)
+    app = create_vision_api(vision_ai)
     
     # Start Prometheus metrics server
     try:

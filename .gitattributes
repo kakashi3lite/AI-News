@@ -1,0 +1,85 @@
+﻿# Auto detect text files and perform LF normalization
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.c text
+*.h text
+*.js text
+*.ts text
+*.jsx text
+*.tsx text
+*.json text
+*.md text
+*.txt text
+*.yml text
+*.yaml text
+*.xml text
+*.html text
+*.css text
+*.scss text
+*.sass text
+*.less text
+*.sql text
+*.sh text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Declare files that will always have CRLF line endings on checkout.
+*.sln text eol=crlf
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary
+*.fla binary
+*.swf binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+*.pyc binary
+*.pdf binary
+*.ez binary
+*.bz2 binary
+*.swp binary
+*.jar binary
+*.class binary
+*.so binary
+*.dll binary
+*.exe binary
+
+# Language-specific settings
+*.js linguist-language=JavaScript
+*.ts linguist-language=TypeScript
+*.jsx linguist-language=JavaScript
+*.tsx linguist-language=TypeScript
+
+# Documentation
+*.md linguist-documentation
+*.txt linguist-documentation
+README* linguist-documentation
+CHANGELOG* linguist-documentation
+CONTRIBUTING* linguist-documentation
+LICENSE* linguist-documentation
+
+# Generated files
+*.min.js linguist-generated
+*.min.css linguist-generated
+*.map linguist-generated
+dist/* linguist-generated
+build/* linguist-generated
+out/* linguist-generated
+.next/* linguist-generated
+coverage/* linguist-generated
+node_modules/* linguist-vendored
+vendor/* linguist-vendored

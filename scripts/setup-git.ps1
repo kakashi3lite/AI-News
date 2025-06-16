@@ -60,7 +60,7 @@ function Write-Header {
 
 function Write-Success {
     param([string]$Message)
-    Write-Host "✓ $Message" -ForegroundColor $Colors.Green
+    Write-Host "[OK] $Message" -ForegroundColor $Colors.Green
 }
 
 function Write-Warning {
@@ -70,17 +70,17 @@ function Write-Warning {
 
 function Write-Error {
     param([string]$Message)
-    Write-Host "✗ $Message" -ForegroundColor $Colors.Red
+    Write-Host "[ERROR] $Message" -ForegroundColor $Colors.Red
 }
 
 function Write-Info {
     param([string]$Message)
-    Write-Host "ℹ $Message" -ForegroundColor $Colors.Cyan
+    Write-Host "[INFO] $Message" -ForegroundColor $Colors.Cyan
 }
 
 function Write-Step {
     param([string]$Message)
-    Write-Host "→ $Message" -ForegroundColor $Colors.Purple
+    Write-Host "[STEP] $Message" -ForegroundColor $Colors.Purple
 }
 
 # Show help if requested
@@ -373,7 +373,7 @@ git status -s
 Write-Host "🌿 Remaining branches:" -ForegroundColor Blue
 git branch -a
 
-Write-Host "✅ Cleanup complete!" -ForegroundColor Green
+Write-Host "[SUCCESS] Cleanup complete!" -ForegroundColor Green
 '@
 
 $GitCleanupPath = Join-Path $ScriptsDir "git-cleanup.ps1"
@@ -577,13 +577,13 @@ Write-Header "Setup Complete!"
 Write-Success "Git configuration has been successfully set up for AI News Dashboard"
 Write-Host ""
 Write-Info "What was configured:"
-Write-Host "  ✓ Git hooks directory and permissions" -ForegroundColor Green
-Write-Host "  ✓ Commit message template" -ForegroundColor Green
-Write-Host "  ✓ Useful Git aliases ($($Aliases.Count) aliases)" -ForegroundColor Green
-Write-Host "  ✓ Project-specific Git settings" -ForegroundColor Green
-Write-Host "  ✓ Development tools configuration" -ForegroundColor Green
-Write-Host "  ✓ Utility scripts for cleanup and statistics" -ForegroundColor Green
-Write-Host "  ✓ .gitattributes for proper file handling" -ForegroundColor Green
+Write-Host "  [OK] Git hooks directory and permissions" -ForegroundColor Green
+Write-Host "  [OK] Commit message template" -ForegroundColor Green
+Write-Host "  [OK] Useful Git aliases ($($Aliases.Count) aliases)" -ForegroundColor Green
+Write-Host "  [OK] Project-specific Git settings" -ForegroundColor Green
+Write-Host "  [OK] Development tools configuration" -ForegroundColor Green
+Write-Host "  [OK] Utility scripts for cleanup and statistics" -ForegroundColor Green
+Write-Host "  [OK] .gitattributes for proper file handling" -ForegroundColor Green
 Write-Host ""
 Write-Info "Available commands:"
 Write-Host "  git aliases                    - List all configured aliases" -ForegroundColor Cyan
@@ -604,4 +604,4 @@ Write-Host "  2. Review the Git hooks in .githooks/" -ForegroundColor White
 Write-Host "  3. Customize aliases as needed" -ForegroundColor White
 Write-Host "  4. Share this setup with your team" -ForegroundColor White
 Write-Host ""
-Write-Success "Happy coding! 🚀"
+Write-Success "Happy coding! [SUCCESS]"

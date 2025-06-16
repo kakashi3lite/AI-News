@@ -1,0 +1,305 @@
+# Dr. Orion TestMaster Vanguard - Prometheus Recording Rules
+# Superhuman QA Monitoring & Alerting - Efficient Metric Aggregation
+
+groups:
+  - name: qa_success_rates
+    interval: 30s
+    rules:
+      - record: qa:test_success_rate_5m
+        expr: |
+          rate(qa_tests_passed_total[5m]) / 
+          rate(qa_tests_total[5m])
+
+      - record: qa:test_success_rate_1h
+        expr: |
+          rate(qa_tests_passed_total[1h]) / 
+          rate(qa_tests_total[1h])
+
+      - record: qa:test_success_rate_24h
+        expr: |
+          rate(qa_tests_passed_total[24h]) / 
+          rate(qa_tests_total[24h])
+
+      - record: qa:persona_success_rate_by_type
+        expr: |
+          sum by (persona, test_type) (
+            rate(qa_persona_tests_passed_total[5m])
+          ) / 
+          sum by (persona, test_type) (
+            rate(qa_persona_tests_total[5m])
+          )
+
+  - name: ai_inference_metrics
+    interval: 60s
+    rules:
+      - record: ai:inference_accuracy_avg_5m
+        expr: |
+          avg_over_time(qa_ai_summarization_accuracy[5m])
+
+      - record: ai:inference_accuracy_avg_1h
+        expr: |
+          avg_over_time(qa_ai_summarization_accuracy[1h])
+
+      - record: ai:rag_accuracy_avg_5m
+        expr: |
+          avg_over_time(qa_ai_rag_accuracy[5m])
+
+      - record: ai:hallucination_rate_avg_5m
+        expr: |
+          avg_over_time(qa_ai_hallucination_rate[5m])
+
+      - record: ai:inference_confidence_score
+        expr: |
+          (
+            qa_ai_summarization_accuracy * 0.4 +
+            qa_ai_rag_accuracy * 0.4 +
+            (1 - qa_ai_hallucination_rate) * 0.2
+          )
+
+  - name: performance_metrics
+    interval: 30s
+    rules:
+      - record: perf:api_response_time_p95_5m
+        expr: |
+          histogram_quantile(0.95, 
+            rate(qa_api_response_time_seconds_bucket[5m])
+          ) * 1000
+
+      - record: perf:api_response_time_p50_5m
+        expr: |
+          histogram_quantile(0.50, 
+            rate(qa_api_response_time_seconds_bucket[5m])
+          ) * 1000
+
+      - record: perf:cache_hit_rate_avg_5m
+        expr: |
+          avg_over_time(qa_cache_hit_rate[5m])
+
+      - record: perf:vector_search_time_p95_5m
+        expr: |
+          histogram_quantile(0.95, 
+            rate(qa_vector_search_time_seconds_bucket[5m])
+          ) * 1000
+
+      - record: perf:overall_performance_score
+        expr: |
+          (
+            (2000 - clamp_max(perf:api_response_time_p95_5m, 2000)) / 2000 * 0.3 +
+            perf:cache_hit_rate_avg_5m * 0.3 +
+            (500 - clamp_max(perf:vector_search_time_p95_5m, 500)) / 500 * 0.4
+          )
+
+  - name: cache_performance
+    interval: 60s
+    rules:
+      - record: cache:redis_hit_rate_5m
+        expr: |
+          avg_over_time(qa_redis_cache_hit_rate[5m])
+
+      - record: cache:browser_hit_rate_5m
+        expr: |
+          avg_over_time(qa_browser_cache_hit_rate[5m])
+
+      - record: cache:cdn_hit_rate_5m
+        expr: |
+          avg_over_time(qa_cdn_cache_hit_rate[5m])
+
+      - record: cache:isr_hit_rate_5m
+        expr: |
+          avg_over_time(qa_isr_cache_hit_rate[5m])
+
+      - record: cache:neural_cache_efficiency
+        expr: |
+          (
+            cache:redis_hit_rate_5m * 0.3 +
+            cache:browser_hit_rate_5m * 0.2 +
+            cache:cdn_hit_rate_5m * 0.3 +
+            cache:isr_hit_rate_5m * 0.2
+          )
+
+  - name: chaos_engineering_metrics
+    interval: 120s
+    rules:
+      - record: chaos:experiment_success_rate_1h
+        expr: |
+          rate(qa_chaos_experiments_passed_total[1h]) / 
+          rate(qa_chaos_experiments_total[1h])
+
+      - record: chaos:recovery_time_avg_1h
+        expr: |
+          avg_over_time(qa_chaos_recovery_time_seconds[1h])
+
+      - record: chaos:resilience_score
+        expr: |
+          (
+            chaos:experiment_success_rate_1h * 0.7 +
+            (30 - clamp_max(chaos:recovery_time_avg_1h, 30)) / 30 * 0.3
+          )
+
+  - name: security_quality_metrics
+    interval: 300s
+    rules:
+      - record: security:vulnerability_density
+        expr: |
+          qa_security_vulnerabilities_detected / 
+          qa_total_code_lines * 1000
+
+      - record: security:accessibility_score
+        expr: |
+          max(0, 1 - qa_accessibility_violations / 100)
+
+      - record: security:cross_browser_compatibility
+        expr: |
+          1 - (qa_cross_browser_failures / qa_cross_browser_tests_total)
+
+      - record: security:overall_quality_score
+        expr: |
+          (
+            (1 - clamp_max(security:vulnerability_density, 1)) * 0.4 +
+            security:accessibility_score * 0.3 +
+            security:cross_browser_compatibility * 0.3
+          )
+
+  - name: predictive_analytics
+    interval: 300s
+    rules:
+      - record: predict:failure_risk_trend_1h
+        expr: |
+          deriv(qa_predictive_failure_score[1h])
+
+      - record: predict:anomaly_severity
+        expr: |
+          qa_anomaly_detection_score * 
+          (1 + abs(predict:failure_risk_trend_1h))
+
+      - record: predict:confidence_trend_6h
+        expr: |
+          avg_over_time(qa_confidence_score[6h])
+
+  - name: multi_agent_pipeline
+    interval: 60s
+    rules:
+      - record: agent:pipeline_throughput_5m
+        expr: |
+          rate(qa_multi_agent_tests_completed_total[5m])
+
+      - record: agent:average_performance_score
+        expr: |
+          avg by (pipeline_id) (qa_agent_performance_score)
+
+      - record: agent:pipeline_efficiency
+        expr: |
+          agent:pipeline_throughput_5m / 
+          qa_multi_agent_pipeline_active_agents
+
+  - name: test_coverage_metrics
+    interval: 300s
+    rules:
+      - record: coverage:functional_test_coverage
+        expr: |
+          qa_functional_tests_covered / qa_total_features
+
+      - record: coverage:performance_test_coverage
+        expr: |
+          qa_performance_tests_covered / qa_total_endpoints
+
+      - record: coverage:security_test_coverage
+        expr: |
+          qa_security_tests_covered / qa_total_attack_vectors
+
+      - record: coverage:overall_test_coverage
+        expr: |
+          (
+            coverage:functional_test_coverage * 0.4 +
+            coverage:performance_test_coverage * 0.3 +
+            coverage:security_test_coverage * 0.3
+          )
+
+  - name: data_quality_metrics
+    interval: 600s
+    rules:
+      - record: data:drift_severity_score
+        expr: |
+          qa_data_drift_score * 
+          (1 + rate(qa_data_drift_events_total[1h]))
+
+      - record: data:consistency_trend_24h
+        expr: |
+          avg_over_time(qa_test_data_consistency_score[24h])
+
+      - record: data:quality_degradation_rate
+        expr: |
+          rate(qa_data_quality_issues_total[1h])
+
+  - name: business_impact_metrics
+    interval: 300s
+    rules:
+      - record: business:user_experience_score
+        expr: |
+          (
+            perf:overall_performance_score * 0.4 +
+            security:overall_quality_score * 0.3 +
+            ai:inference_confidence_score * 0.3
+          )
+
+      - record: business:system_reliability_score
+        expr: |
+          (
+            qa:test_success_rate_1h * 0.4 +
+            chaos:resilience_score * 0.3 +
+            cache:neural_cache_efficiency * 0.3
+          )
+
+      - record: business:overall_qa_health_score
+        expr: |
+          (
+            business:user_experience_score * 0.5 +
+            business:system_reliability_score * 0.5
+          )
+
+  - name: trend_analysis
+    interval: 3600s
+    rules:
+      - record: trend:test_success_rate_24h_change
+        expr: |
+          (
+            qa:test_success_rate_1h - 
+            qa:test_success_rate_24h offset 23h
+          ) / qa:test_success_rate_24h offset 23h * 100
+
+      - record: trend:ai_accuracy_24h_change
+        expr: |
+          (
+            ai:inference_accuracy_avg_1h - 
+            ai:inference_accuracy_avg_1h offset 23h
+          ) / ai:inference_accuracy_avg_1h offset 23h * 100
+
+      - record: trend:performance_24h_change
+        expr: |
+          (
+            perf:overall_performance_score - 
+            perf:overall_performance_score offset 23h
+          ) / perf:overall_performance_score offset 23h * 100
+
+  - name: sla_compliance
+    interval: 300s
+    rules:
+      - record: sla:test_success_rate_compliance
+        expr: |
+          qa:test_success_rate_1h >= 0.95
+
+      - record: sla:api_response_time_compliance
+        expr: |
+          perf:api_response_time_p95_5m <= 2000
+
+      - record: sla:ai_accuracy_compliance
+        expr: |
+          ai:inference_accuracy_avg_5m >= 0.85
+
+      - record: sla:overall_compliance_score
+        expr: |
+          (
+            sla:test_success_rate_compliance +
+            sla:api_response_time_compliance +
+            sla:ai_accuracy_compliance
+          ) / 3

@@ -83,8 +83,6 @@ cp .env.example .env.local
 
 # Start development server
 npm run dev
-```
-
 ### Environment Variables
 
 ```env
@@ -99,13 +97,46 @@ NEXTAUTH_URL="http://localhost:3000"
 OPENAI_API_KEY="sk-..."
 NEWS_API_KEY="your-news-api-key"
 GOOGLE_API_KEY="your-google-api-key"
+YOUTUBE_API_KEY="your-youtube-api-key"
+O4_MODEL_API_KEY="your-o4-model-key"
+O4_MODEL_API_URL="https://api.o4model.com/v1/completions"
 
-# Analytics (Optional)
+# Development & Testing
+NODE_ENV="development"
+USE_MOCK_DATA="true"  # Enable mock data for testing without API keys
+
+# Feature Flags
+ENABLE_SOCIAL_FEATURES="true"
+ENABLE_EXPERIMENTATION="true"
+ENABLE_ANALYTICS="true"
+```
+
+### 🧪 Testing & Development Mode
+
+The application includes comprehensive mock data support for development and testing:
+
+- **Mock News Data**: When API keys are missing or `USE_MOCK_DATA=true`, the app uses realistic mock news articles
+- **Mock AI Summaries**: Both OpenAI and O4 model clients fall back to mock summaries when APIs are unavailable
+- **Mock YouTube Transcripts**: YouTube summarization works with mock transcript data
+- **Graceful Degradation**: All features remain functional even without external API access
+
+```bash
+# Run with mock data (no API keys required)
+USE_MOCK_DATA=true npm run dev
+
+# Run with real APIs
+USE_MOCK_DATA=false npm run dev
+```
+
+### 📊 Analytics & Monitoring (Optional)
+
+```env
+# Analytics Services
 VERCEL_ANALYTICS_ID="your-vercel-analytics-id"
 MIXPANEL_TOKEN="your-mixpanel-token"
 POSTHOG_KEY="your-posthog-key"
 
-# Feature Flags
+# Additional Feature Flags
 ENABLE_VOICE_SEARCH="true"
 ENABLE_REAL_TIME_COLLAB="false"
 ENABLE_ADVANCED_AI="true"

@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dr. Orion TestMaster - Superhuman QA Monitoring Dashboard</title>
+    
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --dark-bg: #1a1a1a;
+            --card-bg: #2d3748;
+            --text-light: #e2e8f0;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #2d3748 100%);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: rgba(44, 62, 80, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--secondary-color);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--secondary-color) !important;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(52, 152, 219, 0.2);
+        }
+        
+        .card-header {
+            background: rgba(52, 152, 219, 0.1);
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+            font-weight: 600;
+        }
+        
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-online { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-error { background-color: var(--danger-color); }
+        
+        .alert-item {
+            border-left: 4px solid;
+            margin-bottom: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 0 8px 8px 0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .alert-critical { border-left-color: var(--danger-color); }
+        .alert-warning { border-left-color: var(--warning-color); }
+        .alert-info { border-left-color: var(--secondary-color); }
+        
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .test-item:last-child {
+            border-bottom: none;
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+        }
+        
+        .progress {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+        
+        .real-time-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 10px;
+            height: 10px;
+            background: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
+        
+        .connected {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .disconnected {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .persona-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .persona-card {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .chaos-experiment {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-performance {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: rgba(39, 174, 96, 0.1);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--secondary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .tab-content {
+            margin-top: 1rem;
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--text-light);
+            background: transparent;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-microscope me-2"></i>
+                Dr. Orion "TestMaster" Vanguard - Superhuman QA Monitor
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="current-time"></span>
+                </span>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status disconnected">
+        <i class="fas fa-wifi me-1"></i>
+        <span>Connecting...</span>
+    </div>
+    
+    <!-- Main Dashboard -->
+    <div class="container-fluid mt-4">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-value text-success" id="success-rate">--</div>
+                    <div class="metric-label">Success Rate (24h)</div>
+                    <div class="real-time-indicator"></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-value text-info" id="total-tests">--</div>
+                    <div class="metric-label">Total Tests (24h)</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-value text-warning" id="active-alerts">--</div>
+                    <div class="metric-label">Active Alerts</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="metric-value text-primary" id="api-response-time">--</div>
+                    <div class="metric-label">Avg Response Time</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Tabs -->
+        <div class="row">
+            <div class="col-12">
+                <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                            <i class="fas fa-tachometer-alt me-1"></i> Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tests-tab" data-bs-toggle="tab" data-bs-target="#tests" type="button" role="tab">
+                            <i class="fas fa-vial me-1"></i> Test Execution
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">
+                            <i class="fas fa-server me-1"></i> System Metrics
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button" role="tab">
+                            <i class="fas fa-exclamation-triangle me-1"></i> Alerts
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="ai-tab" data-bs-toggle="tab" data-bs-target="#ai" type="button" role="tab">
+                            <i class="fas fa-brain me-1"></i> AI Inference
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="dashboardTabContent">
+                    <!-- Overview Tab -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-line me-2"></i>Test Execution Timeline
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="testTimelineChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-users me-2"></i>Persona Testing Status
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="persona-grid" id="persona-status">
+                                            <!-- Persona cards will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-bolt me-2"></i>Chaos Engineering Status
+                                    </div>
+                                    <div class="card-body" id="chaos-status">
+                                        <!-- Chaos experiments will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-memory me-2"></i>Neural Cache Performance
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <div class="text-center">
+                                                    <div class="h4 text-success" id="cache-hit-rate">--</div>
+                                                    <small>Hit Rate</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-center">
+                                                    <div class="h4 text-info" id="cache-response-time">--</div>
+                                                    <small>Avg Response</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="progress mt-3">
+                                            <div class="progress-bar bg-success" id="cache-performance-bar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Test Execution Tab -->
+                    <div class="tab-pane fade" id="tests" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-list me-2"></i>Recent Test Executions
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="recent-tests">
+                                            <!-- Recent tests will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-pie me-2"></i>Test Distribution
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="testDistributionChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- System Metrics Tab -->
+                    <div class="tab-pane fade" id="system" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-microchip me-2"></i>CPU & Memory Usage
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="systemMetricsChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-network-wired me-2"></i>Network & API Performance
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="networkMetricsChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-heartbeat me-2"></i>System Health Overview
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="h5" id="current-cpu">--</div>
+                                                    <small>CPU Usage</small>
+                                                    <div class="progress mt-2">
+                                                        <div class="progress-bar" id="cpu-progress" style="width: 0%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="h5" id="current-memory">--</div>
+                                                    <small>Memory Usage</small>
+                                                    <div class="progress mt-2">
+                                                        <div class="progress-bar" id="memory-progress" style="width: 0%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="h5" id="active-connections">--</div>
+                                                    <small>Active Connections</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="h5" id="error-rate">--</div>
+                                                    <small>Error Rate</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alerts Tab -->
+                    <div class="tab-pane fade" id="alerts" role="tabpanel">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-bell me-2"></i>Active Alerts</span>
+                                        <button class="btn btn-sm btn-outline-light" onclick="acknowledgeAllAlerts()">
+                                            <i class="fas fa-check me-1"></i>Acknowledge All
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="alerts-list">
+                                            <!-- Alerts will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AI Inference Tab -->
+                    <div class="tab-pane fade" id="ai" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-robot me-2"></i>Model Performance Metrics
+                                    </div>
+                                    <div class="card-body" id="model-performance">
+                                        <!-- Model performance will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-bar me-2"></i>Inference Accuracy
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="accuracyChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    
+    <script>
+        // Global variables
+        let socket;
+        let charts = {};
+        let dashboardData = {
+            testMetrics: [],
+            systemMetrics: [],
+            alerts: []
+        };
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSocket();
+            initializeCharts();
+            loadInitialData();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+        });
+        
+        // Socket.IO connection
+        function initializeSocket() {
+            socket = io('/monitor');
+            
+            socket.on('connect', function() {
+                updateConnectionStatus(true);
+            });
+            
+            socket.on('disconnect', function() {
+                updateConnectionStatus(false);
+            });
+            
+            socket.on('test_metric', function(data) {
+                handleTestMetric(data);
+            });
+            
+            socket.on('system_metric', function(data) {
+                handleSystemMetric(data);
+            });
+            
+            socket.on('alert', function(data) {
+                handleAlert(data);
+            });
+        }
+        
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connection-status');
+            if (connected) {
+                statusElement.className = 'connection-status connected';
+                statusElement.innerHTML = '<i class="fas fa-wifi me-1"></i><span>Connected</span>';
+            } else {
+                statusElement.className = 'connection-status disconnected';
+                statusElement.innerHTML = '<i class="fas fa-wifi me-1"></i><span>Disconnected</span>';
+            }
+        }
+        
+        // Initialize charts
+        function initializeCharts() {
+            // Test Timeline Chart
+            const timelineCtx = document.getElementById('testTimelineChart').getContext('2d');
+            charts.timeline = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Passed Tests',
+                        data: [],
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Failed Tests',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { ticks: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+            
+            // Test Distribution Chart
+            const distributionCtx = document.getElementById('testDistributionChart').getContext('2d');
+            charts.distribution = new Chart(distributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Persona', 'AI Inference', 'Chaos', 'Neural Cache', 'Multi-Agent'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#3498db',
+                            '#9b59b6',
+                            '#e74c3c',
+                            '#f39c12',
+                            '#27ae60'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0' }
+                        }
+                    }
+                }
+            });
+            
+            // System Metrics Chart
+            const systemCtx = document.getElementById('systemMetricsChart').getContext('2d');
+            charts.system = new Chart(systemCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CPU %',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)'
+                    }, {
+                        label: 'Memory %',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { 
+                            ticks: { color: '#e2e8f0' },
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+            
+            // Network Metrics Chart
+            const networkCtx = document.getElementById('networkMetricsChart').getContext('2d');
+            charts.network = new Chart(networkCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'API Response Time (ms)',
+                        data: [],
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)'
+                    }, {
+                        label: 'Error Rate %',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { ticks: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+            
+            // Accuracy Chart
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            charts.accuracy = new Chart(accuracyCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['GPT-4o', 'Claude-3.5', 'Local LLM'],
+                    datasets: [{
+                        label: 'Accuracy %',
+                        data: [0, 0, 0],
+                        backgroundColor: ['#3498db', '#9b59b6', '#27ae60']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#e2e8f0' } },
+                        y: { 
+                            ticks: { color: '#e2e8f0' },
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Load initial data
+        async function loadInitialData() {
+            try {
+                // Load dashboard summary
+                const summaryResponse = await fetch('/api/dashboard/summary');
+                const summary = await summaryResponse.json();
+                updateSummaryCards(summary);
+                
+                // Load test metrics
+                const testResponse = await fetch('/api/metrics/test?hours=24');
+                const testMetrics = await testResponse.json();
+                dashboardData.testMetrics = testMetrics;
+                updateTestCharts();
+                updateRecentTests();
+                
+                // Load system metrics
+                const systemResponse = await fetch('/api/metrics/system?hours=24');
+                const systemMetrics = await systemResponse.json();
+                dashboardData.systemMetrics = systemMetrics;
+                updateSystemCharts();
+                
+                // Load alerts
+                const alertsResponse = await fetch('/api/alerts');
+                const alerts = await alertsResponse.json();
+                dashboardData.alerts = alerts;
+                updateAlertsList();
+                
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+            }
+        }
+        
+        // Update summary cards
+        function updateSummaryCards(summary) {
+            document.getElementById('success-rate').textContent = 
+                (summary.success_rate_24h * 100).toFixed(1) + '%';
+            document.getElementById('total-tests').textContent = summary.total_tests_24h;
+            document.getElementById('active-alerts').textContent = summary.active_alerts;
+            document.getElementById('api-response-time').textContent = 
+                summary.api_response_time.toFixed(2) + 's';
+            
+            // Update system health indicators
+            document.getElementById('current-cpu').textContent = 
+                summary.current_cpu.toFixed(1) + '%';
+            document.getElementById('current-memory').textContent = 
+                summary.current_memory.toFixed(1) + '%';
+            document.getElementById('cache-hit-rate').textContent = 
+                (summary.cache_hit_rate * 100).toFixed(1) + '%';
+            
+            // Update progress bars
+            updateProgressBar('cpu-progress', summary.current_cpu);
+            updateProgressBar('memory-progress', summary.current_memory);
+            updateProgressBar('cache-performance-bar', summary.cache_hit_rate * 100);
+        }
+        
+        // Update progress bar
+        function updateProgressBar(elementId, value) {
+            const progressBar = document.getElementById(elementId);
+            progressBar.style.width = value + '%';
+            
+            // Update color based on value
+            progressBar.className = 'progress-bar';
+            if (value > 80) {
+                progressBar.classList.add('bg-danger');
+            } else if (value > 60) {
+                progressBar.classList.add('bg-warning');
+            } else {
+                progressBar.classList.add('bg-success');
+            }
+        }
+        
+        // Handle real-time test metric
+        function handleTestMetric(data) {
+            dashboardData.testMetrics.push(data);
+            // Keep only last 1000 metrics
+            if (dashboardData.testMetrics.length > 1000) {
+                dashboardData.testMetrics.shift();
+            }
+            updateTestCharts();
+            updateRecentTests();
+        }
+        
+        // Handle real-time system metric
+        function handleSystemMetric(data) {
+            dashboardData.systemMetrics.push(data);
+            // Keep only last 100 metrics
+            if (dashboardData.systemMetrics.length > 100) {
+                dashboardData.systemMetrics.shift();
+            }
+            updateSystemCharts();
+        }
+        
+        // Handle real-time alert
+        function handleAlert(data) {
+            dashboardData.alerts.unshift(data);
+            updateAlertsList();
+            
+            // Show notification
+            showNotification(data.title, data.message, data.severity);
+        }
+        
+        // Update test charts
+        function updateTestCharts() {
+            // Update timeline chart
+            const last24h = dashboardData.testMetrics.filter(m => 
+                new Date(m.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+            );
+            
+            // Group by hour
+            const hourlyData = {};
+            last24h.forEach(metric => {
+                const hour = new Date(metric.timestamp).getHours();
+                if (!hourlyData[hour]) {
+                    hourlyData[hour] = { passed: 0, failed: 0 };
+                }
+                if (metric.status === 'passed') {
+                    hourlyData[hour].passed++;
+                } else if (metric.status === 'failed') {
+                    hourlyData[hour].failed++;
+                }
+            });
+            
+            const hours = Object.keys(hourlyData).sort((a, b) => a - b);
+            const passedData = hours.map(h => hourlyData[h].passed);
+            const failedData = hours.map(h => hourlyData[h].failed);
+            
+            charts.timeline.data.labels = hours.map(h => h + ':00');
+            charts.timeline.data.datasets[0].data = passedData;
+            charts.timeline.data.datasets[1].data = failedData;
+            charts.timeline.update('none');
+            
+            // Update distribution chart
+            const testTypes = ['persona', 'ai_inference', 'chaos', 'neural_cache', 'multi_agent'];
+            const distribution = testTypes.map(type => 
+                last24h.filter(m => m.test_type === type).length
+            );
+            
+            charts.distribution.data.datasets[0].data = distribution;
+            charts.distribution.update('none');
+        }
+        
+        // Update system charts
+        function updateSystemCharts() {
+            const last2h = dashboardData.systemMetrics.filter(m => 
+                new Date(m.timestamp) > new Date(Date.now() - 2 * 60 * 60 * 1000)
+            ).slice(-20); // Last 20 data points
+            
+            const labels = last2h.map(m => 
+                new Date(m.timestamp).toLocaleTimeString('en-US', { 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                })
+            );
+            
+            // System metrics chart
+            charts.system.data.labels = labels;
+            charts.system.data.datasets[0].data = last2h.map(m => m.cpu_percent);
+            charts.system.data.datasets[1].data = last2h.map(m => m.memory_percent);
+            charts.system.update('none');
+            
+            // Network metrics chart
+            charts.network.data.labels = labels;
+            charts.network.data.datasets[0].data = last2h.map(m => m.api_response_time * 1000);
+            charts.network.data.datasets[1].data = last2h.map(m => m.error_rate * 100);
+            charts.network.update('none');
+        }
+        
+        // Update recent tests list
+        function updateRecentTests() {
+            const recentTests = dashboardData.testMetrics
+                .slice(-10)
+                .reverse();
+            
+            const container = document.getElementById('recent-tests');
+            container.innerHTML = recentTests.map(test => `
+                <div class="test-item">
+                    <div>
+                        <strong>${test.test_name}</strong>
+                        <br>
+                        <small class="text-muted">${test.test_type} • ${test.environment}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge ${getStatusBadgeClass(test.status)}">${test.status}</span>
+                        <br>
+                        <small class="text-muted">${test.duration.toFixed(2)}s</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Update alerts list
+        function updateAlertsList() {
+            const activeAlerts = dashboardData.alerts.filter(a => !a.resolved);
+            
+            const container = document.getElementById('alerts-list');
+            if (activeAlerts.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">No active alerts</div>';
+                return;
+            }
+            
+            container.innerHTML = activeAlerts.map(alert => `
+                <div class="alert-item alert-${alert.severity}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${alert.title}</strong>
+                            <p class="mb-1">${alert.message}</p>
+                            <small class="text-muted">
+                                ${new Date(alert.timestamp).toLocaleString()}
+                                ${alert.test_type ? ' • ' + alert.test_type : ''}
+                                ${alert.environment ? ' • ' + alert.environment : ''}
+                            </small>
+                        </div>
+                        <div>
+                            <span class="badge bg-${getSeverityColor(alert.severity)}">${alert.severity}</span>
+                            ${!alert.acknowledged ? `
+                                <button class="btn btn-sm btn-outline-light ms-2" 
+                                        onclick="acknowledgeAlert('${alert.id}')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Utility functions
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'passed': return 'bg-success';
+                case 'failed': return 'bg-danger';
+                case 'skipped': return 'bg-warning';
+                default: return 'bg-secondary';
+            }
+        }
+        
+        function getSeverityColor(severity) {
+            switch (severity) {
+                case 'critical': return 'danger';
+                case 'warning': return 'warning';
+                case 'info': return 'info';
+                default: return 'secondary';
+            }
+        }
+        
+        // Update current time
+        function updateCurrentTime() {
+            document.getElementById('current-time').textContent = 
+                new Date().toLocaleString();
+        }
+        
+        // Show notification
+        function showNotification(title, message, severity) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${getSeverityColor(severity)} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 80px; right: 20px; z-index: 1050; max-width: 400px;';
+            notification.innerHTML = `
+                <strong>${title}</strong><br>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // Acknowledge alert
+        async function acknowledgeAlert(alertId) {
+            try {
+                const response = await fetch(`/api/alerts/${alertId}/acknowledge`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    // Update local data
+                    const alert = dashboardData.alerts.find(a => a.id === alertId);
+                    if (alert) {
+                        alert.acknowledged = true;
+                    }
+                    updateAlertsList();
+                }
+            } catch (error) {
+                console.error('Failed to acknowledge alert:', error);
+            }
+        }
+        
+        // Acknowledge all alerts
+        async function acknowledgeAllAlerts() {
+            const activeAlerts = dashboardData.alerts.filter(a => !a.resolved && !a.acknowledged);
+            
+            for (const alert of activeAlerts) {
+                await acknowledgeAlert(alert.id);
+            }
+        }
+    </script>
+</body>
+</html>

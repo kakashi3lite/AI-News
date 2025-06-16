@@ -1,0 +1,38 @@
+Set-PSReadLineOption : The predictive 
+suggestion feature cannot be enabled because 
+the console output doesn't support virtual 
+terminal processing or it's redirected.
+At C:\Users\Swanand\OneDrive\Documents\Window
+sPowerShell\Microsoft.PowerShell_profile.ps1:
+6 char:1
++ Set-PSReadLineOption -PredictionSource 
+History
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~
+    + CategoryInfo          : NotSpecified:  
+   (:) [Set-PSReadLineOption], ArgumentExce  
+  ption
+    + FullyQualifiedErrorId : System.Argumen 
+   tException,Microsoft.PowerShell.SetPSRea  
+  dLineOption
+ 
+Set-PSReadLineOption : The handle is invalid.
+At C:\Users\Swanand\OneDrive\Documents\Window
+sPowerShell\Microsoft.PowerShell_profile.ps1:
+7 char:1
++ Set-PSReadLineOption -PredictionViewStyle 
+ListView
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo          : NotSpecified:  
+   (:) [Set-PSReadLineOption], IOException
+    + FullyQualifiedErrorId : System.IO.IOEx 
+   ception,Microsoft.PowerShell.SetPSReadLi  
+  neOption
+ 
+Traceback (most recent call last):
+  File "C:\Users\Swanand\CascadeProjects\ai-news-dashboard\mlops\blockchain\news_verification.py", line 42, in <module>
+    from transformers import (
+    ...<2 lines>...
+    )
+ModuleNotFoundError: No module named 'transformers'

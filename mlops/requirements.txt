@@ -148,6 +148,112 @@ slack-sdk>=3.23.0
 twilio>=8.10.0
 sendgrid>=6.10.0
 
+# Agentic AI & Multi-Agent Systems (Added for Commander DeployX)
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-openai>=0.0.5
+langchain-anthropic>=0.1.0
+autogen-agentchat>=0.2.0
+crewai>=0.1.0
+openai>=1.0.0
+anthropic>=0.8.0
+
+# Code Quality & Analysis (Enhanced for Agentic Workflows)
+pylint>=2.15.0
+black>=22.0.0
+mypy>=1.0.0
+bandit>=1.7.0
+flake8>=5.0.0
+isort>=5.10.0
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+pytest-xdist>=3.0.0
+pytest-mock>=3.10.0
+codeclimate-test-reporter>=0.2.3
+sonarqube-api>=1.3.0
+
+# Advanced Documentation Generation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.2.0
+mkdocs>=1.4.0
+mkdocs-material>=8.5.0
+pydoc-markdown>=4.6.0
+pdoc>=14.0.0
+autodoc>=0.5.0
+
+# Performance Profiling & Optimization
+psutil>=5.9.0
+memory-profiler>=0.60.0
+line-profiler>=4.0.0
+py-spy>=0.3.0
+cprofile-pretty>=1.0.0
+snakeviz>=2.1.0
+pyflame>=1.6.7
+
+# Enhanced CLI & Rich UI
+rich>=13.0.0
+click>=8.1.0
+typer>=0.7.0
+tqdm>=4.64.0
+textual>=0.41.0
+urwid>=2.1.2
+
+# Configuration Management
+pyyaml>=6.0
+toml>=0.10.0
+jsonschema>=4.17.0
+pydantic>=2.0.0
+hydra-core>=1.3.0
+omegaconf>=2.3.0
+
+# Git & Version Control Enhanced
+gitpython>=3.1.0
+pre-commit>=3.0.0
+commitizen>=3.0.0
+gitlint>=0.19.0
+
+# Async & Concurrency Enhanced
+aiofiles>=22.1.0
+aiohttp>=3.8.0
+uvloop>=0.17.0
+asyncio-throttle>=1.0.0
+aioredis>=2.0.0
+
+# Development & Testing Enhanced
+ipython>=8.0.0
+jupyter>=1.0.0
+notebook>=6.5.0
+factory-boy>=3.2.0
+faker>=18.0.0
+hypothesis>=6.82.0
+mutmut>=2.4.0
+
+# Chaos Engineering Enhanced
+chaostoolkit>=1.17.0
+chaostoolkit-lib>=1.25.0
+chaostoolkit-kubernetes>=0.26.0
+chaostoolkit-prometheus>=0.4.0
+chaostoolkit-istio>=0.1.0
+gremlin-python>=3.6.0
+litmus-python>=0.3.0
+
+# Neural Cache & Prefetch Intelligence
+redis>=4.6.0
+memcached>=1.59
+pymemcache>=4.0.0
+cachetools>=5.3.0
+diskcache>=5.6.0
+joblib>=1.3.0
+
+# Workflow Orchestration Enhanced
+prefect>=2.14.0
+airflow>=2.6.0
+argo-workflows>=6.4.0
+kubeflow-pipelines>=2.0.0
+zapier>=1.0.0
+n8n-python>=0.1.0
+
 # Quantum Computing (Optional)
 qiskit>=0.45.0
 cirq>=1.2.0

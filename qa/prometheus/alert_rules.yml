@@ -1,0 +1,302 @@
+# Dr. Orion TestMaster Vanguard - Prometheus Alert Rules
+# Superhuman QA Monitoring & Alerting
+
+groups:
+  - name: qa_test_failures
+    rules:
+      - alert: QATestFailureRateHigh
+        expr: |
+          (
+            rate(qa_tests_failed_total[5m]) / 
+            rate(qa_tests_total[5m])
+          ) * 100 > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: qa
+          component: testing
+        annotations:
+          summary: "High QA test failure rate detected"
+          description: "QA test failure rate is {{ $value }}% over the last 5 minutes, which exceeds the 10% threshold."
+          runbook_url: "https://docs.company.com/runbooks/qa-test-failures"
+
+      - alert: QATestFailureRateCritical
+        expr: |
+          (
+            rate(qa_tests_failed_total[5m]) / 
+            rate(qa_tests_total[5m])
+          ) * 100 > 25
+        for: 1m
+        labels:
+          severity: critical
+          team: qa
+          component: testing
+        annotations:
+          summary: "Critical QA test failure rate detected"
+          description: "QA test failure rate is {{ $value }}% over the last 5 minutes, which exceeds the critical 25% threshold."
+          runbook_url: "https://docs.company.com/runbooks/qa-test-failures"
+
+  - name: ai_inference_quality
+    rules:
+      - alert: AIInferenceAccuracyLow
+        expr: qa_ai_summarization_accuracy < 0.85
+        for: 3m
+        labels:
+          severity: warning
+          team: ai
+          component: inference
+        annotations:
+          summary: "AI summarization accuracy below threshold"
+          description: "AI summarization accuracy is {{ $value }}, which is below the 85% threshold."
+          runbook_url: "https://docs.company.com/runbooks/ai-inference-quality"
+
+      - alert: AIHallucinationRateHigh
+        expr: qa_ai_hallucination_rate > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: ai
+          component: inference
+        annotations:
+          summary: "High AI hallucination rate detected"
+          description: "AI hallucination rate is {{ $value }}, which exceeds the 5% threshold."
+          runbook_url: "https://docs.company.com/runbooks/ai-hallucination"
+
+      - alert: RAGAccuracyDegraded
+        expr: qa_ai_rag_accuracy < 0.90
+        for: 5m
+        labels:
+          severity: warning
+          team: ai
+          component: rag
+        annotations:
+          summary: "RAG system accuracy degraded"
+          description: "RAG accuracy is {{ $value }}, which is below the 90% threshold."
+          runbook_url: "https://docs.company.com/runbooks/rag-accuracy"
+
+  - name: performance_degradation
+    rules:
+      - alert: APIResponseTimeSlow
+        expr: qa_api_response_time_ms > 2000
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+          component: api
+        annotations:
+          summary: "API response time is slow"
+          description: "API response time is {{ $value }}ms, which exceeds the 2000ms threshold."
+          runbook_url: "https://docs.company.com/runbooks/api-performance"
+
+      - alert: CacheHitRateLow
+        expr: qa_cache_hit_rate < 0.80
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          component: cache
+        annotations:
+          summary: "Cache hit rate is low"
+          description: "Cache hit rate is {{ $value }}, which is below the 80% threshold."
+          runbook_url: "https://docs.company.com/runbooks/cache-performance"
+
+      - alert: VectorSearchSlow
+        expr: qa_vector_search_time_ms > 500
+        for: 2m
+        labels:
+          severity: warning
+          team: ai
+          component: vector-db
+        annotations:
+          summary: "Vector search is slow"
+          description: "Vector search time is {{ $value }}ms, which exceeds the 500ms threshold."
+          runbook_url: "https://docs.company.com/runbooks/vector-search-performance"
+
+  - name: chaos_engineering
+    rules:
+      - alert: ChaosExperimentFailed
+        expr: qa_chaos_experiment_success_rate < 0.95
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+          component: chaos
+        annotations:
+          summary: "Chaos experiment success rate low"
+          description: "Chaos experiment success rate is {{ $value }}, indicating system resilience issues."
+          runbook_url: "https://docs.company.com/runbooks/chaos-experiments"
+
+      - alert: ChaosRecoveryTimeSlow
+        expr: qa_chaos_recovery_time_seconds > 30
+        for: 1m
+        labels:
+          severity: warning
+          team: sre
+          component: recovery
+        annotations:
+          summary: "Slow recovery from chaos experiment"
+          description: "Recovery time from chaos experiment is {{ $value }}s, which exceeds the 30s threshold."
+          runbook_url: "https://docs.company.com/runbooks/chaos-recovery"
+
+  - name: persona_testing
+    rules:
+      - alert: PersonaTestFailure
+        expr: |
+          (
+            rate(qa_persona_tests_failed_total[10m]) / 
+            rate(qa_persona_tests_total[10m])
+          ) > 0.15
+        for: 5m
+        labels:
+          severity: warning
+          team: qa
+          component: persona
+        annotations:
+          summary: "High persona test failure rate for {{ $labels.persona }}"
+          description: "Persona {{ $labels.persona }} has a failure rate of {{ $value }}, exceeding 15% threshold."
+          runbook_url: "https://docs.company.com/runbooks/persona-testing"
+
+  - name: security_vulnerabilities
+    rules:
+      - alert: SecurityVulnerabilityDetected
+        expr: qa_security_vulnerabilities_detected > 0
+        for: 0s
+        labels:
+          severity: critical
+          team: security
+          component: vulnerability-scan
+        annotations:
+          summary: "Security vulnerabilities detected"
+          description: "{{ $value }} security vulnerabilities have been detected in the application."
+          runbook_url: "https://docs.company.com/runbooks/security-vulnerabilities"
+
+      - alert: AccessibilityViolations
+        expr: qa_accessibility_violations > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: frontend
+          component: accessibility
+        annotations:
+          summary: "Accessibility violations detected"
+          description: "{{ $value }} accessibility violations have been detected, exceeding the threshold of 5."
+          runbook_url: "https://docs.company.com/runbooks/accessibility"
+
+  - name: system_health
+    rules:
+      - alert: QASystemDown
+        expr: up{job="qa-orchestrator"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: qa
+          component: orchestrator
+        annotations:
+          summary: "QA Orchestrator is down"
+          description: "The QA Orchestrator service is not responding."
+          runbook_url: "https://docs.company.com/runbooks/qa-system-down"
+
+      - alert: MonitoringDashboardDown
+        expr: up{job="qa-monitoring-dashboard"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: qa
+          component: monitoring
+        annotations:
+          summary: "QA Monitoring Dashboard is down"
+          description: "The QA Monitoring Dashboard service is not responding."
+          runbook_url: "https://docs.company.com/runbooks/monitoring-dashboard-down"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+          ) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          component: memory
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}%, which exceeds the 85% threshold."
+          runbook_url: "https://docs.company.com/runbooks/high-memory-usage"
+
+  - name: predictive_alerts
+    rules:
+      - alert: PredictiveFailureRisk
+        expr: qa_predictive_failure_score > 0.8
+        for: 3m
+        labels:
+          severity: warning
+          team: qa
+          component: predictive
+        annotations:
+          summary: "High risk of test failures predicted"
+          description: "Predictive model indicates {{ $value }} probability of test failures in the next hour."
+          runbook_url: "https://docs.company.com/runbooks/predictive-failures"
+
+      - alert: AnomalyDetected
+        expr: qa_anomaly_detection_score > 0.7
+        for: 2m
+        labels:
+          severity: warning
+          team: qa
+          component: anomaly-detection
+        annotations:
+          summary: "Anomaly detected in QA metrics"
+          description: "Anomaly detection score is {{ $value }}, indicating unusual patterns in QA metrics."
+          runbook_url: "https://docs.company.com/runbooks/anomaly-detection"
+
+  - name: data_quality
+    rules:
+      - alert: DataDriftDetected
+        expr: qa_data_drift_score > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          team: data
+          component: drift-detection
+        annotations:
+          summary: "Data drift detected"
+          description: "Data drift score is {{ $value }}, indicating significant changes in data distribution."
+          runbook_url: "https://docs.company.com/runbooks/data-drift"
+
+      - alert: TestDataInconsistency
+        expr: qa_test_data_consistency_score < 0.95
+        for: 3m
+        labels:
+          severity: warning
+          team: qa
+          component: test-data
+        annotations:
+          summary: "Test data inconsistency detected"
+          description: "Test data consistency score is {{ $value }}, below the 95% threshold."
+          runbook_url: "https://docs.company.com/runbooks/test-data-consistency"
+
+  - name: multi_agent_pipeline
+    rules:
+      - alert: MultiAgentPipelineStalled
+        expr: qa_multi_agent_pipeline_active_agents == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: qa
+          component: multi-agent
+        annotations:
+          summary: "Multi-agent QA pipeline has stalled"
+          description: "No active agents detected in the multi-agent QA pipeline."
+          runbook_url: "https://docs.company.com/runbooks/multi-agent-pipeline"
+
+      - alert: AgentPerformanceDegraded
+        expr: qa_agent_performance_score < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: qa
+          component: agent-performance
+        annotations:
+          summary: "QA agent performance degraded"
+          description: "Agent {{ $labels.agent_name }} performance score is {{ $value }}, below 80% threshold."
+          runbook_url: "https://docs.company.com/runbooks/agent-performance"
