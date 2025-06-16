@@ -1,6 +1,6 @@
 /**
  * Batch Summarization API Route
- * Dr. NewsForge's AI News Dashboard
+ * AI News Dashboard - Batch Summarization
  * 
  * Handles bulk summarization of multiple articles with intelligent batching,
  * rate limiting, and comprehensive error handling.

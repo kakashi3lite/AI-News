@@ -1,6 +1,6 @@
 /**
  * Enhanced News Ingestion Module
- * Part of Dr. NewsForge's AI News Dashboard
+ * AI News Dashboard - News Ingestion
  * 
  * Features:
  * - Async RSS/API crawling with adaptive scheduling

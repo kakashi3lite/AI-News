@@ -2,8 +2,6 @@
 
 **Context-Aware AI News Platform with Arc-Style Search & Social Features**
 
-*Built by Dr. Phoenix "SoloSprint" Vega - The Context-Aware SoloFounder*
-
 ---
 
 ## 🎯 Overview
@@ -670,6 +668,6 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Built with ❤️ by Dr. Phoenix "SoloSprint" Vega**
+
 
 *Transforming news consumption through context-aware intelligence and Arc-style user experience.*

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Service Mapper - Auto-detect existing pipelines, cache layers, and services
- * Part of Dr. NewsForge's AI News Dashboard Enhancement
+ * AI News Dashboard Service Mapper
  */
 
 const fs = require('fs');

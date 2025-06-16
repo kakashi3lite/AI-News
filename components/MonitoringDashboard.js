@@ -1,7 +1,6 @@
 /**
  * AI News Dashboard - Real-time Monitoring Dashboard
- * Context-aware system monitoring with Dr. Vega's solo-founder approach
- * Built by Dr. Phoenix "SoloSprint" Vega
+ * Context-aware system monitoring
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -533,7 +532,7 @@ const MonitoringDashboard = ({ isOpen, onClose }) => {
                 Keyboard shortcuts: ESC (close), Ctrl+R (refresh), 1-4 (switch tabs)
               </div>
               <div>
-                Built by Dr. Phoenix "SoloSprint" Vega • Context-Aware Monitoring
+                Context-Aware Monitoring
               </div>
             </div>
           </div>

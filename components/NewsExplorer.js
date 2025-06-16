@@ -9,7 +9,7 @@ import { Send } from "lucide-react";
 export default function NewsExplorer() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "system", content: "Ask me about any news topic to explore!" },
+    { role: "system", content: "Enter a news topic to explore relevant articles and insights." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

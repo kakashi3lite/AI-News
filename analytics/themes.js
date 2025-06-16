@@ -1,5 +1,5 @@
 /**
- * Dr. NewsForge's Advanced Theme & Trend Extraction Engine
+ * Advanced Theme & Trend Extraction Engine
  * 
  * Automatically analyzes top articles every hour to extract key themes,
  * trending topics, and sentiment patterns. Inspired by NewsWhip's approach
@@ -13,7 +13,7 @@
  * - Geographic and temporal pattern analysis
  * - Real-time theme scoring and ranking
  * 
- * @author Dr. Nova "NewsForge" Arclight
+
  * @version 1.0.0
  */
 

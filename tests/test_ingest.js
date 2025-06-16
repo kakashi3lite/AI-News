@@ -1,6 +1,6 @@
 /**
  * Test Suite for News Ingestion Module
- * Dr. NewsForge's AI News Dashboard
+ * AI News Dashboard - Ingestion Tests
  * 
  * Tests:
  * - RSS feed parsing and normalization

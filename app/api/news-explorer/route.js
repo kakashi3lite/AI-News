@@ -21,7 +21,7 @@ export async function POST(req) {
       .slice(0, 3)
       .map((a, i) => `${i + 1}. ${a.title}: ${a.description || a.content}`)
       .join("\n");
-    const prompt = `You are an expert news assistant. Summarize and explain the latest news on this topic:\n${lastMsg}\n\nHere are the most relevant articles:\n${context}\n\nGive a clear, concise, and insightful answer for a curious reader.`;
+    const prompt = `Summarize and explain the latest news on this topic:\n${lastMsg}\n\nHere are the most relevant articles:\n${context}\n\nProvide a clear, concise, and insightful answer for a curious reader.`;
     const summary = await queryO4Model(prompt);
     return NextResponse.json({ reply: summary });
   } catch (e) {

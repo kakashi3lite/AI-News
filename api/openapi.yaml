@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: AI News Dashboard - NLP Summarization API
   description: |
-    Dr. NewsForge's AI-powered news summarization and analysis API.
+    AI-powered news summarization and analysis API.
     
     This API provides advanced NLP capabilities including:
     - Multi-model text summarization (O4, OpenAI GPT)
@@ -25,7 +25,7 @@ info:
     - `gpt-4`: Advanced analysis and reasoning
   version: 1.0.0
   contact:
-    name: Dr. NewsForge
+    name: AI News Dashboard
     email: newsforge@ai-dashboard.com
   license:
     name: MIT

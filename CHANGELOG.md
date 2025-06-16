@@ -430,6 +430,6 @@ For questions about releases or migration:
 
 ---
 
-**Built with ❤️ by Dr. Phoenix "SoloSprint" Vega**
+
 
 *Transforming news consumption through context-aware intelligence.*

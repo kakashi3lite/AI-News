@@ -3,7 +3,6 @@
 /**
  * AI News Dashboard - Deployment Script
  * Automated MVP build and deployment with context-aware features
- * Built by Dr. Phoenix "SoloSprint" Vega
  */
 
 const { execSync } = require('child_process');

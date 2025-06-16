@@ -1,6 +1,6 @@
 /**
  * NLP Summarization Service
- * Dr. NewsForge's AI News Dashboard
+ * AI News Dashboard - News Summarizer
  * 
  * Features:
  * - Transformer-based text summarization

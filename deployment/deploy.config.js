@@ -1,5 +1,5 @@
 // MVP Deployment Configuration for AI News Dashboard
-// Dr. Phoenix "SoloSprint" Vega - Context-Aware Solo Founder Setup
+// Context-Aware Deployment Configuration
 
 const deploymentConfig = {
   // Environment Configuration
