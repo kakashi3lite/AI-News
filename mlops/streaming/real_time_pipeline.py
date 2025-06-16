@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dr. NewsForge's Advanced Real-Time News Processing Pipeline
+AI News Dashboard - Advanced Real-Time News Processing Pipeline
 
 Implements high-throughput streaming analytics for real-time news processing,
 event detection, and intelligent content routing.
@@ -15,7 +15,7 @@ Features:
 - Multi-language content processing
 - Anomaly detection in news patterns
 
-Author: Dr. Nova "NewsForge" Arclight
+AI News Dashboard - Real-Time Processing Module
 Version: 2.0.0
 """
 

@@ -195,7 +195,7 @@ class NewsIngestionEngine {
       const response = await axios.get(source.url, {
         timeout: 10000,
         headers: {
-          'User-Agent': 'NewsForge-AI-Dashboard/1.0 (https://github.com/newsforge/ai-dashboard)'
+          'User-Agent': 'AI-News-Dashboard/1.0'
         }
       });
 
@@ -319,7 +319,7 @@ class NewsIngestionEngine {
       params: { ...params, key: source.key },
       timeout: 15000,
       headers: {
-        'User-Agent': 'NewsForge-AI-Dashboard/1.0'
+        'User-Agent': 'AI-News-Dashboard/1.0'
       }
     });
 

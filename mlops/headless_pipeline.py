@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Headless Agentic CI/CD Pipeline Automation
-Dr. Aurora "CodeForge" Synth's Automated Lint/Test/Optimization Pipeline
+AI News Dashboard - Automated Lint/Test/Optimization Pipeline
 
 Integrates with the agentic code optimizer to provide continuous,
 automated code quality improvement without human intervention.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dr. NewsForge's Reinforcement Learning News Agent
+AI News Dashboard - Reinforcement Learning News Agent
 
 Advanced reinforcement learning system for personalized news recommendation,
 user engagement optimization, and adaptive content curation.
@@ -19,7 +19,7 @@ Features:
 - Exploration vs exploitation strategies
 - Federated reinforcement learning
 
-Author: Dr. Nova "NewsForge" Arclight
+AI News Dashboard - Reinforcement Learning Module
 Version: 2.0.0
 """
 

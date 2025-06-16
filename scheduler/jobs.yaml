@@ -1,9 +1,9 @@
-# Dr. NewsForge's Automated Job Scheduler Configuration
+# AI News Dashboard - Automated Job Scheduler Configuration
 # Defines scheduled tasks for news ingestion, theme extraction, and analytics
 
 version: "1.0"
 scheduler:
-  name: "NewsForge Analytics Scheduler"
+  name: "AI News Dashboard Analytics Scheduler"
   timezone: "UTC"
   max_concurrent_jobs: 5
   retry_policy:
@@ -39,7 +39,7 @@ jobs:
           url: "${WEBHOOK_URL}/theme-extraction-success"
       on_failure:
         - type: "email"
-          recipients: ["admin@newsforge.ai"]
+          recipients: ["admin@ai-news-dashboard.com"]
         - type: "webhook"
           url: "${WEBHOOK_URL}/theme-extraction-failure"
     
@@ -104,11 +104,11 @@ jobs:
     notifications:
       on_success:
         - type: "email"
-          recipients: ["reports@newsforge.ai"]
+          recipients: ["reports@ai-news-dashboard.com"]
           subject: "Daily Theme Analysis Report"
       on_failure:
         - type: "email"
-          recipients: ["admin@newsforge.ai"]
+          recipients: ["admin@ai-news-dashboard.com"]
 
   # Weekly Trend Analysis
   weekly_trend_analysis:
@@ -251,7 +251,7 @@ notifications:
     smtp_port: 587
     smtp_user: "${SMTP_USER}"
     smtp_password: "${SMTP_PASSWORD}"
-    from_address: "noreply@newsforge.ai"
+    from_address: "noreply@ai-news-dashboard.com"]
   
   webhook:
     default_timeout: "10s"
@@ -262,8 +262,8 @@ notifications:
   
   slack:
     webhook_url: "${SLACK_WEBHOOK_URL}"
-    channel: "#newsforge-alerts"
-    username: "NewsForge Bot"
+    channel: "#ai-news-alerts"
+    username: "AI News Bot"
 
 # Monitoring and observability
 monitoring:
@@ -284,7 +284,7 @@ monitoring:
   tracing:
     enabled: true
     jaeger_endpoint: "${JAEGER_ENDPOINT}"
-    service_name: "newsforge-scheduler"
+    service_name: "ai-news-scheduler"
 
 # Resource limits
 resources:
@@ -323,7 +323,7 @@ backup:
   destinations:
     - type: "s3"
       bucket: "${BACKUP_S3_BUCKET}"
-      prefix: "newsforge-scheduler/"
+      prefix: "ai-news-scheduler/"
     - type: "local"
       path: "./backups/"
 
@@ -340,7 +340,7 @@ integrations:
   prometheus:
     enabled: true
     push_gateway: "${PROMETHEUS_PUSH_GATEWAY}"
-    job_name: "newsforge-scheduler"
+    job_name: "ai-news-scheduler"
   
   grafana:
     dashboard_url: "${GRAFANA_DASHBOARD_URL}"
@@ -349,7 +349,7 @@ integrations:
   elasticsearch:
     enabled: false
     hosts: ["${ELASTICSEARCH_HOST}"]
-    index_prefix: "newsforge-"
+    index_prefix: "ai-news-"
   
   redis:
     enabled: true
@@ -431,7 +431,7 @@ api:
 documentation:
   version: "1.0.0"
   description: |
-    Dr. NewsForge's Automated Job Scheduler manages all background tasks
+    AI News Dashboard Automated Job Scheduler manages all background tasks
     for the AI News Dashboard, including theme extraction, news ingestion,
     sentiment analysis, and system maintenance.
     
