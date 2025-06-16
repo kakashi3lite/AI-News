@@ -1,113 +1,174 @@
-# AI News Dashboard - Architecture Analysis
+# System Architecture
 
-*Generated on: 2025-06-15T02:20:04.211Z*
+> **Comprehensive overview of the AI News Dashboard system architecture**
 
-## Summary
+## Overview
 
-- **Total API Endpoints:** 0
-- **AI Services:** 23
-- **Data Ingestion Services:** 9
-- **Dependencies:** 19
+The AI News Dashboard is built as a modern, scalable web application with a microservices-inspired architecture. The system combines real-time news aggregation, AI-powered processing, and intelligent analytics in a unified platform.
 
-## Current Services
+## High-Level Architecture
 
-### API Endpoints
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Frontend      │────│   API Layer      │────│   AI Services   │
+│                 │    │                  │    │                 │
+│ • Next.js App   │    │ • REST APIs      │    │ • OpenAI GPT-4  │
+│ • React UI      │    │ • Route Handlers │    │ • O4-Mini-High  │
+│ • Tailwind CSS  │    │ • Middleware     │    │ • Summarization │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────────┐
+                    │   Data Layer        │
+                    │                     │
+                    │ • MongoDB           │
+                    │ • File System       │
+                    │ • Cache Layer       │
+                    │ • External APIs     │
+                    └─────────────────────┘
+```
 
+## Core Components
+
+### Frontend Layer
+- **Framework**: Next.js 14 with App Router
+- **UI Components**: React with shadcn/ui
+- **Styling**: Tailwind CSS
+- **State Management**: React hooks and context
+
+### API Layer
+- **News Aggregation**: `/api/news` - Multi-source news fetching
+- **AI Summarization**: `/api/summarize` - Content processing
+- **Analytics**: `/api/analytics` - Trend analysis
+- **Health Monitoring**: `/api/health` - System status
 
 ### AI Services
-- **.env.local** - Models:  - No description available
-- **app\api\news\route.js** - Models:  - API route to aggregate news from global sources and support search, category, and tag
-- **app\api\news-explorer\route.js** - Models:  - POST /api/news-explorer
-- **app\api\summarize\route.js** - Models: OpenAI - POST /api/summarize
-- **app\api\summarize-openai\route.js** - Models:  - POST /api/summarize-openai
-- **app\api\summarize-youtube\route.js** - Models:  - POST /api/summarize-youtube
-  Body: { url, engine }
-  Returns: { summary }
-- **app\layout.js** - Models:  - No description available
-- **app\NewsDashboard.js** - Models: OpenAI - @typedef {Object} NewsItem
-  @property {string} id
-  @property {string} title
-  @property {string} d
-- **app\page.js** - Models:  - No description available
-- **components\NewsExplorer.js** - Models:  - Floating Explore button
-- **components\ui\sidebar.js** - Models:  - Sidebar: Modular, accessible, with active highlighting and tooltips
-- **components\ui\tooltip.js** - Models:  - Tooltip.js: Simple accessible tooltip using shadcn-ui primitives or fallback
-- **lib\newsFetcher.js** - Models:  - Fetch and normalize news from Google News API (via Custom Search)
-- **lib\o4ModelClient.js** - Models: OpenAI - Docs: https://axios-http.com/docs/api_intro
-- **lib\openaiClient.js** - Models: OpenAI - Calls OpenAI Chat Completion API for summarization.
-  Docs: https://axios-http.com/docs/api_intro
-- **lib\youtubeTranscript.js** - Models:  - Fetches the transcript of a YouTube video using a public transcript API (or fallback).
-  @param {str
-- **package-lock.json** - Models:  - registry.npmjs.org/@alloc/quick-lru/-/quick-lru-5.2.0.tgz",
-- **package.json** - Models:  - No description available
-- **postcss.config.js** - Models:  - No description available
-- **README.md** - Models: OpenAI - localhost:3000](http://localhost:3000) in your browser.
-- **scripts\service-mapper.js** - Models: OpenAI, Anthropic, HuggingFace - Service Mapper - Auto-detect existing pipelines, cache layers, and services
-  Part of Dr. NewsForge
-- **styles.css** - Models:  - No description available
-- **tailwind.config.js** - Models:  - @type {import('tailwindcss').Config}
+- **Text Summarization**: OpenAI GPT-4, O4-Mini-High
+- **Content Analysis**: Theme extraction and sentiment
+- **Trend Detection**: Pattern recognition and forecasting
+- **Quality Scoring**: Content relevance and accuracy
 
-### Data Ingestion
-- **app\api\news\route.js** - Sources:  - API route to aggregate news from global sources and support search, category, and tag
-- **app\api\news-explorer\route.js** - Sources:  - POST /api/news-explorer
-- **app\api\summarize-youtube\route.js** - Sources: YouTube - POST /api/summarize-youtube
-  Body: { url, engine }
-  Returns: { summary }
-- **app\NewsDashboard.js** - Sources: YouTube - @typedef {Object} NewsItem
-  @property {string} id
-  @property {string} title
-  @property {string} d
-- **components\NewsExplorer.js** - Sources:  - Floating Explore button
-- **lib\newsFetcher.js** - Sources: News API - Fetch and normalize news from Google News API (via Custom Search)
-- **lib\youtubeTranscript.js** - Sources: YouTube - Fetches the transcript of a YouTube video using a public transcript API (or fallback).
-  @param {str
-- **README.md** - Sources: YouTube - localhost:3000](http://localhost:3000) in your browser.
-- **scripts\service-mapper.js** - Sources: News API, YouTube, RSS, Twitter/X - Service Mapper - Auto-detect existing pipelines, cache layers, and services
-  Part of Dr. NewsForge
+### Data Layer
+- **Database**: MongoDB for persistent storage
+- **Caching**: In-memory and file-based caching
+- **External APIs**: News sources and AI services
+- **File Storage**: Local file system for temporary data
 
-### Dependencies by Category
+## Data Flow
 
-**FRONTEND:**
-  - @heroicons/react (^2.0.18)
-  - @radix-ui/react-label (^2.1.4)
-  - lucide-react (^0.503.0)
-  - next (14.2.3)
-  - react (18.2.0)
-  - react-dom (18.2.0)
-  - eslint-config-next (14.2.3)
+### News Processing Pipeline
+```
+1. News Sources → 2. Aggregation → 3. AI Processing → 4. Storage → 5. Frontend
+   │                │                │                │           │
+   ├─ RSS Feeds     ├─ Deduplication ├─ Summarization ├─ MongoDB  ├─ React UI
+   ├─ News APIs     ├─ Normalization ├─ Classification ├─ Cache    ├─ Real-time
+   └─ Web Scraping  └─ Validation    └─ Sentiment     └─ Files    └─ Updates
+```
 
-**HTTP:**
-  - axios (^1.8.4)
+### Key Services
 
-**UTILITY:**
-  - form-data (^4.0.2)
-  - framer-motion (^12.7.4)
-  - shadcn-ui (latest)
-  - youtube-transcript (^1.2.1)
-  - ytdl-core (^4.11.5)
-  - autoprefixer (^10.4.21)
-  - eslint (8.56.0)
-  - postcss (^8.5.3)
-  - postcss-import (^16.1.0)
+#### News Aggregation (`/lib/newsFetcher.js`)
+- Multi-source news fetching
+- Content normalization
+- Duplicate detection
+- Rate limiting
 
-**STYLING:**
-  - @tailwindcss/postcss (^4.1.4)
-  - tailwindcss (^4.1.4)
+#### AI Processing (`/lib/openaiClient.js`, `/lib/o4ModelClient.js`)
+- Text summarization
+- Content analysis
+- Theme extraction
+- Quality scoring
 
-## Recommendations
+#### API Routes (`/app/api/`)
+- RESTful endpoints
+- Request validation
+- Response formatting
+- Error handling
 
-- Consider adding Redis cache for improved performance
-- Expand API endpoints for comprehensive news operations
-- Add Redis for caching and real-time features
-- Consider WebSocket support for real-time updates
+## Technology Stack
 
-## Next Steps
+### Frontend Technologies
+- **Next.js 14**: React framework with App Router
+- **React 18**: Component-based UI library
+- **Tailwind CSS**: Utility-first styling
+- **shadcn/ui**: Pre-built component library
 
-1. Implement missing cache layer (Redis)
-2. Add real-time WebSocket support
-3. Expand NLP capabilities
-4. Implement user personalization
-5. Add comprehensive monitoring
+### Backend Technologies
+- **Node.js**: JavaScript runtime
+- **MongoDB**: NoSQL database
+- **Mongoose**: ODM for MongoDB
+- **Express**: Web framework (via Next.js)
+
+### AI/ML Integration
+- **OpenAI API**: GPT-4 for advanced processing
+- **O4-Mini-High**: Optimized summarization
+- **Custom Models**: Theme extraction and analysis
+
+### DevOps & Monitoring
+- **Docker**: Containerization
+- **GitHub Actions**: CI/CD pipeline
+- **Prometheus**: Metrics collection
+- **Grafana**: Monitoring dashboards
+
+## Performance Optimization
+
+### Caching Strategy
+- **API Response Caching**: Reduce external API calls
+- **Database Query Caching**: Optimize data retrieval
+- **Static Asset Caching**: Improve load times
+- **CDN Integration**: Global content delivery
+
+### Scalability Features
+- **Horizontal Scaling**: Multi-instance deployment
+- **Load Balancing**: Traffic distribution
+- **Database Sharding**: Data partitioning
+- **Microservices Ready**: Modular architecture
+
+## Security Architecture
+
+### Data Protection
+- **API Key Encryption**: Secure credential storage
+- **Input Validation**: Prevent injection attacks
+- **Rate Limiting**: API abuse prevention
+- **HTTPS Enforcement**: Encrypted communications
+
+### Access Control
+- **Authentication**: User identity verification
+- **Authorization**: Role-based permissions
+- **Session Management**: Secure user sessions
+- **CORS Configuration**: Cross-origin security
+
+## Monitoring & Observability
+
+### Health Monitoring
+- **System Health**: `/api/health` endpoint
+- **Performance Metrics**: Response times and throughput
+- **Error Tracking**: Comprehensive error logging
+- **Resource Usage**: CPU, memory, and storage monitoring
+
+### Alerting
+- **Threshold Alerts**: Performance degradation
+- **Error Rate Alerts**: System failures
+- **Capacity Alerts**: Resource exhaustion
+- **External Dependency Alerts**: API failures
+
+## Development Guidelines
+
+### Code Organization
+- **Component Structure**: Modular React components
+- **API Structure**: RESTful route organization
+- **Utility Functions**: Reusable helper functions
+- **Configuration**: Environment-based settings
+
+### Best Practices
+- **Error Handling**: Comprehensive error management
+- **Logging**: Structured logging throughout
+- **Testing**: Unit, integration, and E2E tests
+- **Documentation**: Inline code documentation
 
 ---
-*This document is auto-generated by the Service Mapper*
+
+**Last Updated**: December 2024  
+**Architecture Version**: 2.0  
+**Next Review**: Q1 2025
