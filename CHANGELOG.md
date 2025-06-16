@@ -1,60 +1,41 @@
 # Changelog
 
-All notable changes to the AI News Dashboard project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to the AI News Dashboard project.
 
 ## [Unreleased]
 
 ### Added
-- Comprehensive Git documentation and contribution guidelines
-- Enhanced GitHub Actions workflows for MLOps and QA
-- Blockchain-based news verification system
-- Advanced monitoring and observability features
+- Simplified documentation structure
+- Enhanced contribution guidelines
+- Improved project organization
 
 ### Changed
-- Improved project structure and documentation
-- Enhanced API endpoint organization
-
-### Security
-- Added security audit workflows
-- Implemented secure environment variable handling
+- Streamlined README and documentation
+- Updated architecture documentation
 
 ## [1.0.0] - 2024-01-15
 
 ### Added
-- 🧠 **Context-Aware Intelligence**: Adaptive UI based on user behavior and environmental signals
-- 🔍 **Arc-Style Search Overlay**: Intuitive search with voice support and contextual suggestions
-- 🤖 **AI Skill Orchestrator**: Specialized AI skills for content processing
-- 👥 **Social Features**: Real-time collaboration and community engagement
-- 📊 **Experimentation Engine**: A/B testing with feature flags and analytics
-- ⚡ **Performance Optimization**: Sub-2.5s load times with advanced caching
+- AI-powered news aggregation and summarization
+- Context-aware search functionality
+- Real-time news processing
+- Multi-source news integration
+- Advanced analytics and monitoring
+- Responsive web interface
 
-#### Core Features
-
-##### Context-Aware System
-- Session and history tracking
-- Environmental signal detection (device, network, time)
-- Multi-turn conversational memory
-- Emotional and tone analysis
-- Predictive UI adaptation
-
-##### Arc-Style Search
-- Keyboard shortcut activation (`Ctrl+K`/`Cmd+K`)
-- Voice search capabilities
-- Smart content filtering
-- Recent searches and trending topics
-- Personalized search prompts
-
-##### AI Skill Orchestrator
-- **Summarize**: Extract key points from articles
-- **Compare**: Analyze differences between articles
-- **Explain**: Provide detailed explanations
-- **Draft**: Generate content based on articles
-- **Trend**: Identify patterns and trends
-- **Discuss**: Facilitate topic conversations
-- **Research**: Deep-dive into subjects
+### Features
+- News aggregation from multiple sources
+- AI-powered content summarization
+- Search with intelligent filtering
+- Real-time updates and notifications
+- Performance optimization and caching
+- Comprehensive testing suite
+### Technical Stack
+- Frontend: Next.js 14 with React 18 and TypeScript
+- Backend: Node.js with PostgreSQL database
+- AI Integration: OpenAI GPT models for summarization
+- Deployment: Vercel with edge functions
+- Testing: Jest and Playwright
 
 ##### Social Features
 - Real-time collaboration
