@@ -1,0 +1,53 @@
+# Grafana Datasource Provisioning for RSE Scheduler Orchestrator
+# Automatically configures Prometheus as a data source
+
+apiVersion: 1
+
+datasources:
+  # Prometheus datasource for metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.45.0
+      cacheLevel: 'High'
+      disableRecordingRules: false
+      incrementalQueryOverlapWindow: 10m
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: loki
+    secureJsonData: {}
+    version: 1
+    uid: prometheus-uid
+
+  # Loki datasource for logs (optional)
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: prometheus-uid
+          matcherRegex: "job_id=([\\w-]+)"
+          name: JobMetrics
+          url: "/d/rse-scheduler/rse-scheduler-dashboard?var-job_id=$${__value.raw}"
+    version: 1
+    uid: loki-uid
+
+  # TestData datasource for development
+  - name: TestData
+    type: testdata
+    access: proxy
+    isDefault: false
+    editable: true
+    version: 1
+    uid: testdata-uid

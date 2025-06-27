@@ -1,0 +1,462 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-news-dashboard.com/schemas/news-entry.schema.json",
+  "title": "RSE News Entry Schema",
+  "description": "Schema for validating RSE news entries to ensure data integrity and consistency",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "url",
+    "source",
+    "publishedAt",
+    "ingestedAt",
+    "content",
+    "topics",
+    "metadata"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Unique SHA-256 hash identifier for the news entry"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "Title of the news article"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://",
+      "description": "Original URL of the news article"
+    },
+    "source": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "ArXiv",
+            "Nature",
+            "Science",
+            "IEEE Spectrum",
+            "ACM News",
+            "TechCrunch",
+            "Wired",
+            "MIT Technology Review",
+            "Ars Technica",
+            "The Verge",
+            "Google News",
+            "NewsAPI",
+            "Reddit",
+            "Hacker News",
+            "GitHub Trending",
+            "Stack Overflow Blog",
+            "Dev.to",
+            "Medium",
+            "Other"
+          ],
+          "description": "Name of the news source"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["rss", "api", "scraper", "manual"],
+          "description": "Type of ingestion method used"
+        },
+        "reliability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Reliability score of the source (0-1)"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["academic", "industry", "news", "blog", "social"],
+          "description": "Category of the news source"
+        }
+      },
+      "additionalProperties": false
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the article was originally published"
+    },
+    "ingestedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the article was ingested into our system"
+    },
+    "content": {
+      "type": "object",
+      "required": ["summary"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 50,
+          "maxLength": 1000,
+          "description": "AI-generated summary of the article"
+        },
+        "fullText": {
+          "type": "string",
+          "maxLength": 50000,
+          "description": "Full text content of the article (optional)"
+        },
+        "excerpt": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Brief excerpt from the article"
+        },
+        "wordCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Word count of the full article"
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+          "default": "en",
+          "description": "Language code (ISO 639-1 format)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "topics": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["name", "confidence"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "artificial-intelligence",
+              "machine-learning",
+              "deep-learning",
+              "natural-language-processing",
+              "computer-vision",
+              "robotics",
+              "quantum-computing",
+              "blockchain",
+              "cybersecurity",
+              "cloud-computing",
+              "edge-computing",
+              "iot",
+              "5g",
+              "autonomous-vehicles",
+              "biotechnology",
+              "nanotechnology",
+              "renewable-energy",
+              "space-technology",
+              "virtual-reality",
+              "augmented-reality",
+              "software-engineering",
+              "data-science",
+              "big-data",
+              "programming",
+              "web-development",
+              "mobile-development",
+              "devops",
+              "open-source",
+              "startups",
+              "funding",
+              "acquisitions",
+              "research",
+              "policy",
+              "ethics",
+              "privacy",
+              "regulation",
+              "other"
+            ],
+            "description": "Topic category name"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Confidence score for topic classification (0-1)"
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 50
+            },
+            "maxItems": 20,
+            "description": "Related keywords for this topic"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Array of topics with confidence scores"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Schema version (semantic versioning)"
+        },
+        "processingTime": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Time taken to process this entry (in milliseconds)"
+        },
+        "qualityScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Overall quality score of the article (0-1)"
+        },
+        "duplicateOf": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "ID of the original article if this is a duplicate"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "maxItems": 15,
+          "uniqueItems": true,
+          "description": "Additional tags for categorization"
+        },
+        "sentiment": {
+          "type": "object",
+          "properties": {
+            "score": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1,
+              "description": "Sentiment score (-1 to 1, negative to positive)"
+            },
+            "label": {
+              "type": "string",
+              "enum": ["positive", "negative", "neutral"],
+              "description": "Sentiment label"
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Confidence in sentiment analysis"
+            }
+          },
+          "additionalProperties": false
+        },
+        "readability": {
+          "type": "object",
+          "properties": {
+            "fleschKincaid": {
+              "type": "number",
+              "description": "Flesch-Kincaid readability score"
+            },
+            "gradeLevel": {
+              "type": "string",
+              "description": "Estimated grade level for reading"
+            }
+          },
+          "additionalProperties": false
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url"],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "alt": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "caption": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxItems": 10,
+          "description": "Associated images with the article"
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "affiliation": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "bio": {
+              "type": "string",
+              "maxLength": 1000
+            }
+          },
+          "additionalProperties": false
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["title", "url"],
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "authors": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 100
+                }
+              },
+              "publishedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "doi": {
+                "type": "string",
+                "pattern": "^10\\..+/.+$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxItems": 50,
+          "description": "Academic citations referenced in the article"
+        },
+        "socialMetrics": {
+          "type": "object",
+          "properties": {
+            "shares": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "likes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "comments": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "views": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time this entry was updated"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "breaking-news",
+              "trending",
+              "controversial",
+              "fact-checked",
+              "peer-reviewed",
+              "preprint",
+              "opinion",
+              "sponsored",
+              "duplicate",
+              "low-quality",
+              "high-impact",
+              "archived"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Special flags for this entry"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "id": "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
+      "title": "Revolutionary AI Model Achieves Human-Level Performance in Scientific Research",
+      "url": "https://example.com/ai-breakthrough-2024",
+      "source": {
+        "name": "Nature",
+        "type": "rss",
+        "reliability": 0.95,
+        "category": "academic"
+      },
+      "publishedAt": "2024-01-15T10:30:00Z",
+      "ingestedAt": "2024-01-15T11:00:00Z",
+      "content": {
+        "summary": "Researchers have developed a new AI model that demonstrates human-level performance across multiple scientific domains, marking a significant milestone in artificial intelligence research.",
+        "excerpt": "The breakthrough model, trained on diverse scientific literature, shows unprecedented capability in hypothesis generation and experimental design.",
+        "wordCount": 1250,
+        "language": "en"
+      },
+      "topics": [
+        {
+          "name": "artificial-intelligence",
+          "confidence": 0.95,
+          "keywords": ["AI", "machine learning", "neural networks"]
+        },
+        {
+          "name": "research",
+          "confidence": 0.88,
+          "keywords": ["scientific research", "breakthrough", "discovery"]
+        }
+      ],
+      "metadata": {
+        "version": "1.0.0",
+        "processingTime": 1250,
+        "qualityScore": 0.92,
+        "tags": ["breakthrough", "AI", "research"],
+        "sentiment": {
+          "score": 0.7,
+          "label": "positive",
+          "confidence": 0.85
+        },
+        "flags": ["breaking-news", "high-impact", "peer-reviewed"]
+      }
+    }
+  ]
+}

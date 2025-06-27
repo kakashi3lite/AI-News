@@ -1,0 +1,108 @@
+# RSE Quality Auditor Pre-commit Hooks Configuration
+# Ensures data integrity and style conformity before commits
+
+repos:
+  # Local hooks for RSE-specific checks
+  - repo: local
+    hooks:
+      # RSE Quality Audit
+      - id: rse-audit
+        name: RSE Quality Audit
+        entry: node rse-audit-bot.js audit
+        language: system
+        stages: [commit, push]
+        pass_filenames: false
+        always_run: true
+        
+      # News JSON Schema Validation
+      - id: validate-news-schema
+        name: Validate News JSON Schema
+        entry: node -e "const {RSEQualityAuditor} = require('./rse-audit-bot.js'); new RSEQualityAuditor().validateSchemas().then(() => console.log('✅ Schema validation passed')).catch(e => {console.error('❌ Schema validation failed:', e.message); process.exit(1);})"
+        language: system
+        files: '^news/.*\.json$'
+        
+      # Test execution before commit
+      - id: run-tests
+        name: Run Tests
+        entry: npm run test
+        language: system
+        stages: [commit]
+        pass_filenames: false
+        
+      # Linting check
+      - id: eslint-check
+        name: ESLint Check
+        entry: npm run lint
+        language: system
+        files: '\.(js|jsx|ts|tsx)$'
+        
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      # File formatting
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      
+      # Security checks
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      
+      # Code quality
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+      
+      # JSON/YAML specific
+      - id: pretty-format-json
+        args: ['--autofix', '--indent=2']
+        files: '^news/.*\.json$'
+        
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.37.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+        files: '\.md$'
+        
+  # JavaScript/TypeScript specific
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: '\.(js|jsx|ts|tsx)$'
+        additional_dependencies:
+          - eslint@8.56.0
+          - eslint-config-next@14.2.3
+          
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        
+# Global configuration
+default_stages: [commit]
+fail_fast: false
+minimum_pre_commit_version: '3.0.0'
+
+# Custom configuration for RSE project
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+    
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

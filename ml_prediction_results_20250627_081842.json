@@ -1,0 +1,19 @@
+{
+  "task": "popularity_prediction",
+  "status": "error",
+  "error": "This StandardScaler instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:18:31.392015",
+    "end_time": "2025-06-27T08:18:42.965613",
+    "total_execution_time": 11.573598,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "popularity_prediction",
+      "horizon": "24h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

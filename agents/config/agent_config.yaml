@@ -1,0 +1,191 @@
+# Veteran Developer Agent Configuration
+# Integrates with AI News Dashboard MLOps Infrastructure
+
+agent:
+  id: "dev_agent_30yr_v1"
+  name: "Veteran Developer Agent"
+  version: "1.0.0"
+  experience_years: 30
+  
+# Core capabilities configuration
+capabilities:
+  code_review:
+    enabled: true
+    auto_fix: false
+    severity_threshold: "medium"
+    max_files_per_review: 50
+    exclude_patterns:
+      - "node_modules/**"
+      - ".git/**"
+      - "**/__pycache__/**"
+      - "**/dist/**"
+      - "**/build/**"
+    
+  architecture_review:
+    enabled: true
+    include_performance: true
+    include_security: true
+    include_scalability: true
+    focus_areas:
+      - "microservices"
+      - "data_flow"
+      - "security"
+      - "performance"
+      - "maintainability"
+  
+  security_audit:
+    enabled: true
+    scan_dependencies: true
+    check_secrets: true
+    validate_permissions: true
+    compliance_frameworks:
+      - "OWASP"
+      - "NIST"
+  
+  performance_optimization:
+    enabled: true
+    profile_code: true
+    analyze_bottlenecks: true
+    suggest_caching: true
+    monitor_metrics: true
+  
+  ci_cd_optimization:
+    enabled: true
+    analyze_pipelines: true
+    suggest_improvements: true
+    optimize_build_times: true
+  
+  mentoring:
+    enabled: true
+    provide_examples: true
+    include_best_practices: true
+    suggest_learning_resources: true
+    code_explanation_level: "intermediate"
+
+# Integration settings
+integrations:
+  mlops:
+    enabled: true
+    orchestrator_integration: true
+    model_monitoring: true
+    deployment_automation: true
+    
+  observability:
+    enabled: true
+    full_stack_monitoring: true
+    performance_tracking: true
+    error_tracking: true
+    
+  security:
+    enabled: true
+    compliance_enforcement: true
+    vulnerability_scanning: true
+    secret_management: true
+  
+  github:
+    enabled: true
+    auto_pr_review: false
+    create_issues: true
+    update_documentation: true
+
+# AI News Dashboard specific settings
+project_specific:
+  news_dashboard:
+    monitor_api_performance: true
+    optimize_news_fetching: true
+    enhance_summarization: true
+    improve_caching: true
+    
+  frontend:
+    framework: "nextjs"
+    typescript_migration: true
+    component_optimization: true
+    bundle_analysis: true
+    
+  backend:
+    api_optimization: true
+    database_performance: true
+    caching_strategy: true
+    error_handling: true
+
+# Reporting and notifications
+reporting:
+  format: "markdown"
+  include_metrics: true
+  generate_charts: false
+  auto_save: true
+  output_directory: "./reports"
+  
+notifications:
+  critical_issues: true
+  daily_summary: false
+  weekly_report: true
+  slack_webhook: null
+  email_recipients: []
+
+# Quality gates and thresholds
+quality_gates:
+  code_coverage_threshold: 80
+  security_score_threshold: 85
+  performance_score_threshold: 75
+  maintainability_threshold: 70
+  
+  fail_on_critical: true
+  fail_on_security_high: true
+  warn_on_performance_medium: true
+
+# Learning and adaptation
+learning:
+  track_improvements: true
+  learn_from_feedback: true
+  adapt_recommendations: true
+  update_patterns: true
+
+# Advanced features
+advanced:
+  ai_assisted_fixes: false
+  predictive_analysis: true
+  trend_detection: true
+  automated_refactoring: false
+  
+  experimental_features:
+    enabled: false
+    features:
+      - "auto_documentation"
+      - "intelligent_testing"
+      - "performance_prediction"
+
+# Logging and debugging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/agent.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Resource limits
+resource_limits:
+  max_memory_usage: "2GB"
+  max_cpu_usage: 80
+  max_execution_time: 300
+  max_concurrent_reviews: 3
+
+# Custom rules and patterns
+custom_rules:
+  security:
+    - pattern: "process\.env\.[A-Z_]+"
+      message: "Environment variable usage detected"
+      severity: "low"
+      suggestion: "Ensure proper validation and error handling"
+      
+  performance:
+    - pattern: "console\.log"
+      message: "Console.log in production code"
+      severity: "low"
+      suggestion: "Use proper logging framework"
+      
+  best_practices:
+    - pattern: "TODO|FIXME|HACK"
+      message: "Technical debt marker found"
+      severity: "medium"
+      suggestion: "Create issue to track and resolve"

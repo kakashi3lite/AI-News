@@ -15,6 +15,7 @@ const { XMLParser } = require('fast-xml-parser');
 const crypto = require('crypto');
 const fs = require('fs').promises;
 const path = require('path');
+const { errorHandler, ERROR_TYPES } = require('../lib/errorHandler');
 
 // News source configurations
 const NEWS_SOURCES = {
@@ -73,12 +74,20 @@ class NewsIngestionEngine {
   }
 
   async initializeCache() {
-    try {
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      console.log(`📁 Cache directory initialized: ${this.cacheDir}`);
-    } catch (error) {
-      console.error('Failed to initialize cache directory:', error);
-    }
+    await errorHandler.executeWithErrorHandling(
+      async () => {
+        await fs.mkdir(this.cacheDir, { recursive: true });
+        console.log(`📁 Cache directory initialized: ${this.cacheDir}`);
+      },
+      {
+        name: 'cache_initialization',
+        retryOptions: { maxRetries: 2 },
+        fallback: () => {
+          console.warn('⚠️ Using temporary cache directory');
+          this.cacheDir = path.join(require('os').tmpdir(), 'news-cache');
+        }
+      }
+    );
   }
 
   /**
@@ -101,14 +110,28 @@ class NewsIngestionEngine {
     };
 
     try {
-      // Fetch from RSS sources
-      const rssResults = await this.ingestRSSSources(options);
+      // Fetch from RSS sources with error handling
+      const rssResults = await errorHandler.executeWithErrorHandling(
+        () => this.ingestRSSSources(options),
+        {
+          name: 'rss_ingestion',
+          retryOptions: { maxRetries: 2 },
+          fallback: () => ({ articles: [], sources: [], errors: [{ source: 'rss', error: 'RSS ingestion failed, using fallback' }] })
+        }
+      );
       results.articles.push(...rssResults.articles);
       results.sources.push(...rssResults.sources);
       results.errors.push(...rssResults.errors);
 
-      // Fetch from API sources
-      const apiResults = await this.ingestAPISources(options);
+      // Fetch from API sources with error handling
+      const apiResults = await errorHandler.executeWithErrorHandling(
+        () => this.ingestAPISources(options),
+        {
+          name: 'api_ingestion',
+          retryOptions: { maxRetries: 2 },
+          fallback: () => ({ articles: [], sources: [], errors: [{ source: 'api', error: 'API ingestion failed, using fallback' }] })
+        }
+      );
       results.articles.push(...apiResults.articles);
       results.sources.push(...apiResults.sources);
       results.errors.push(...apiResults.errors);
@@ -118,12 +141,29 @@ class NewsIngestionEngine {
       results.stats.duplicatesRemoved = results.articles.length - uniqueArticles.length;
       results.articles = uniqueArticles;
 
-      // Classify topics
-      results.articles = await this.classifyTopics(results.articles);
+      // Classify topics with error handling
+      results.articles = await errorHandler.executeWithErrorHandling(
+        () => this.classifyTopics(results.articles),
+        {
+          name: 'topic_classification',
+          retryOptions: { maxRetries: 1 },
+          fallback: () => {
+            console.warn('⚠️ Topic classification failed, using basic categorization');
+            return this.basicTopicClassification(results.articles);
+          }
+        }
+      );
       results.stats.categorized = results.articles.length;
 
-      // Cache results
-      await this.cacheResults(results.articles);
+      // Cache results with error handling
+      await errorHandler.executeWithErrorHandling(
+        () => this.cacheResults(results.articles),
+        {
+          name: 'cache_results',
+          retryOptions: { maxRetries: 1 },
+          fallback: () => console.warn('⚠️ Failed to cache results, continuing without caching')
+        }
+      );
 
       results.stats.totalFetched = results.articles.length;
       results.stats.processingTime = Date.now() - startTime;
@@ -133,6 +173,18 @@ class NewsIngestionEngine {
     } catch (error) {
       console.error('❌ Ingestion failed:', error);
       results.errors.push({ source: 'main', error: error.message });
+      
+      // Attempt graceful degradation
+      if (results.articles.length === 0) {
+        console.log('🔄 Attempting emergency fallback...');
+        try {
+          const fallbackResults = await this.emergencyFallback();
+          results.articles.push(...fallbackResults.articles);
+          results.sources.push(...fallbackResults.sources);
+        } catch (fallbackError) {
+          console.error('❌ Emergency fallback also failed:', fallbackError.message);
+        }
+      }
     }
 
     return results;
@@ -199,20 +251,32 @@ class NewsIngestionEngine {
         }
       });
 
-      const parsed = this.xmlParser.parse(response.data);
-      const items = this.extractRSSItems(parsed);
-      
-      const articles = items.map((item, index) => this.normalizeRSSArticle(item, source, index));
-      
-      this.lastFetch.set(cacheKey, now);
-      console.log(`✅ ${source.name}: ${articles.length} articles`);
-      
-      return { articles };
-      
-    } catch (error) {
-      console.error(`❌ RSS fetch failed for ${source.name}:`, error.message);
-      throw error;
-    }
+        const parsed = this.xmlParser.parse(response.data);
+        const items = this.extractRSSItems(parsed);
+        
+        const articles = items.map((item, index) => this.normalizeRSSArticle(item, source, index));
+        
+        this.lastFetch.set(cacheKey, now);
+        console.log(`✅ ${source.name}: ${articles.length} articles`);
+        
+        return { articles };
+      },
+      {
+        name: `rss_fetch_${source.name}`,
+        retryOptions: {
+          maxRetries: 3,
+          retryableErrors: [ERROR_TYPES.NETWORK, ERROR_TYPES.TIMEOUT, ERROR_TYPES.EXTERNAL_API]
+        },
+        circuitBreakerOptions: {
+          failureThreshold: 3,
+          resetTimeout: 300000 // 5 minutes
+        },
+        fallback: async () => {
+          console.log(`🔄 Using cached data for ${source.name}`);
+          return await this.getCachedRSSData(source) || { articles: [] };
+        }
+      }
+    );
   }
 
   /**
@@ -340,6 +404,99 @@ class NewsIngestionEngine {
   }
 
   /**
+   * Get cached RSS data as fallback
+   */
+  async getCachedRSSData(source) {
+    try {
+      const cacheKey = `rss_cache_${source.name.replace(/\s+/g, '_').toLowerCase()}`;
+      const cacheFile = path.join(this.cacheDir, `${cacheKey}.json`);
+      const cached = JSON.parse(await fs.readFile(cacheFile, 'utf8'));
+      if (cached && cached.timestamp > Date.now() - 24 * 60 * 60 * 1000) { // 24 hours
+        console.log(`📦 Retrieved cached data for ${source.name}`);
+        return cached.data;
+      }
+      return null;
+    } catch (error) {
+      console.error(`❌ Failed to get cached data for ${source.name}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Emergency fallback for complete ingestion failure
+   */
+  async emergencyFallback() {
+    try {
+      console.log('🚨 Attempting emergency fallback...');
+      const fallbackSources = [
+        { name: 'BBC News', url: 'http://feeds.bbci.co.uk/news/rss.xml', category: 'general' },
+        { name: 'Reuters', url: 'https://feeds.reuters.com/reuters/topNews', category: 'general' }
+      ];
+      
+      for (const source of fallbackSources) {
+        try {
+          const response = await axios.get(source.url, { timeout: 5000 });
+          const parsed = this.xmlParser.parse(response.data);
+          const items = this.extractRSSItems(parsed);
+          const articles = items.slice(0, 10).map((item, index) => this.normalizeRSSArticle(item, source, index));
+          if (articles.length > 0) {
+            console.log(`✅ Emergency fallback successful with ${source.name}`);
+            return { articles, sources: [{ name: source.name, status: 'emergency_fallback' }] };
+          }
+        } catch (error) {
+          console.log(`❌ Emergency fallback failed for ${source.name}`);
+        }
+      }
+      
+      // Return minimal default content
+      return {
+        articles: [{
+          id: 'emergency_' + Date.now(),
+          title: 'News Service Temporarily Unavailable',
+          description: 'Our news ingestion service is experiencing temporary issues. Please check back later.',
+          content: 'Our news ingestion service is experiencing temporary issues. Please check back later.',
+          url: '#',
+          image: '',
+          publishedAt: new Date().toISOString(),
+          source: { name: 'System', url: '#' },
+          category: 'system',
+          tags: ['system'],
+          ingestionMethod: 'emergency',
+          fetchedAt: new Date().toISOString()
+        }],
+        sources: [{ name: 'Emergency', status: 'fallback' }]
+      };
+    } catch (error) {
+      console.error('❌ Emergency fallback completely failed:', error.message);
+      return { articles: [], sources: [] };
+    }
+  }
+
+  /**
+   * Basic topic classification fallback
+   */
+  basicTopicClassification(articles) {
+    console.log(`🏷️  Using basic topic classification for ${articles.length} articles...`);
+    
+    return articles.map(article => {
+      const text = `${article.title} ${article.description}`.toLowerCase();
+      
+      // Simple keyword-based classification
+      if (text.includes('tech') || text.includes('ai') || text.includes('software')) {
+        article.category = 'technology';
+      } else if (text.includes('business') || text.includes('finance') || text.includes('market')) {
+        article.category = 'business';
+      } else if (text.includes('health') || text.includes('medical')) {
+        article.category = 'health';
+      } else if (text.includes('sport') || text.includes('game')) {
+        article.category = 'sports';
+      }
+      
+      return article;
+    });
+  }
+
+  /**
    * Normalize NewsAPI article
    */
   normalizeNewsAPIArticle(item, source, index) {
@@ -390,11 +547,92 @@ class NewsIngestionEngine {
   }
 
   /**
-   * Classify articles into topics using keyword matching
-   * TODO: Replace with transformer-based classification
+   * Enhanced classification with transformer fallback
    */
   async classifyTopics(articles) {
     console.log(`🏷️  Classifying topics for ${articles.length} articles...`);
+    
+    try {
+      // Try transformer-based classification first
+      const { spawn } = require('child_process');
+      const path = require('path');
+      
+      // Check if transformer classifier is available
+      const transformerPath = path.join(__dirname, 'transformer_classifier.py');
+      const fs = require('fs');
+      
+      if (fs.existsSync(transformerPath)) {
+        console.log('🤖 Using transformer-based classification...');
+        
+        // Prepare articles for Python classifier
+        const articlesData = JSON.stringify(articles.map(article => ({
+          title: article.title,
+          description: article.description,
+          content: article.content,
+          source: article.source,
+          url: article.url
+        })));
+        
+        // Call Python transformer classifier
+        const pythonProcess = spawn('python', ['-c', `
+import asyncio
+import json
+import sys
+sys.path.append('${__dirname.replace(/\\/g, '/')}')
+from transformer_classifier import classify_topics_transformer
+
+async def main():
+    articles = json.loads('${articlesData.replace(/'/g, "\\'")}')
+    results = await classify_topics_transformer(articles)
+    print(json.dumps(results))
+
+asyncio.run(main())
+        `]);
+        
+        let output = '';
+        let error = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+          error += data.toString();
+        });
+        
+        return new Promise((resolve) => {
+          pythonProcess.on('close', (code) => {
+            if (code === 0 && output.trim()) {
+              try {
+                const classifiedArticles = JSON.parse(output.trim());
+                console.log('✅ Transformer classification completed successfully');
+                resolve(classifiedArticles);
+              } catch (parseError) {
+                console.warn('⚠️ Failed to parse transformer results, falling back to keyword classification');
+                resolve(classifyTopicsKeyword(articles));
+              }
+            } else {
+              console.warn(`⚠️ Transformer classification failed (code: ${code}), falling back to keyword classification`);
+              if (error) console.warn('Error:', error);
+              resolve(classifyTopicsKeyword(articles));
+            }
+          });
+        });
+      } else {
+        console.log('📝 Transformer classifier not found, using keyword classification');
+        return classifyTopicsKeyword(articles);
+      }
+    } catch (error) {
+      console.warn('⚠️ Error in transformer classification, falling back to keyword classification:', error.message);
+      return classifyTopicsKeyword(articles);
+    }
+  }
+
+  /**
+   * Keyword-based classification fallback
+   */
+  classifyTopicsKeyword(articles) {
+    console.log(`🏷️  Using keyword-based classification for ${articles.length} articles...`);
     
     return articles.map(article => {
       const text = `${article.title} ${article.description}`.toLowerCase();
@@ -420,6 +658,7 @@ class NewsIngestionEngine {
         article.topicConfidence = bestCategory.score;
       }
       
+      article.classificationMethod = 'keyword';
       return article;
     });
   }

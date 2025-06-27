@@ -1,0 +1,19 @@
+{
+  "task": "topic_emergence",
+  "status": "error",
+  "error": "No text data provided for topic emergence prediction",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:23:06.902733",
+    "end_time": "2025-06-27T08:23:19.030446",
+    "total_execution_time": 12.127713,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "topic_emergence",
+      "horizon": "24h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

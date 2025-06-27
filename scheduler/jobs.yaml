@@ -156,6 +156,122 @@ jobs:
       - name: "storage_freed_mb"
         type: "gauge"
 
+  # ML Prediction Jobs
+  ml_trend_prediction:
+    name: "ML Trend Prediction"
+    description: "Machine learning based trend forecasting"
+    schedule: "0 */6 * * *"  # Every 6 hours
+    enabled: true
+    priority: "medium"
+    timeout: "60m"
+    
+    command:
+       type: "python"
+       script: "mlops/ml_prediction_cli.py"
+       args:
+         - "--task=trend_forecasting"
+         - "--horizon=24h"
+         - "--model-version=v1.0.0"
+    
+    dependencies:
+      - "news_ingestion"
+    
+    notifications:
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/ml-prediction-failure"
+    
+    metrics:
+      - name: "prediction_accuracy"
+        type: "gauge"
+      - name: "ml_processing_time"
+        type: "histogram"
+
+  ml_popularity_prediction:
+    name: "ML Popularity Prediction"
+    description: "Predict article popularity using machine learning"
+    schedule: "0 */4 * * *"  # Every 4 hours
+    enabled: true
+    priority: "medium"
+    timeout: "40m"
+    
+    command:
+       type: "python"
+       script: "mlops/ml_prediction_cli.py"
+       args:
+         - "--task=popularity_prediction"
+    
+    dependencies:
+      - "news_ingestion"
+    
+    notifications:
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/ml-prediction-failure"
+    
+    metrics:
+      - name: "popularity_predictions"
+        type: "counter"
+      - name: "prediction_confidence"
+        type: "histogram"
+
+  ml_sentiment_trends:
+    name: "ML Sentiment Trends"
+    description: "Analyze sentiment trends using machine learning"
+    schedule: "0 */2 * * *"  # Every 2 hours
+    enabled: true
+    priority: "medium"
+    timeout: "30m"
+    
+    command:
+       type: "python"
+       script: "mlops/ml_prediction_cli.py"
+       args:
+         - "--task=sentiment_trends"
+    
+    dependencies:
+      - "sentiment_analysis"
+    
+    notifications:
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/ml-prediction-failure"
+    
+    metrics:
+      - name: "sentiment_trend_accuracy"
+        type: "gauge"
+
+  ml_topic_emergence:
+    name: "ML Topic Emergence Detection"
+    description: "Detect emerging topics using machine learning"
+    schedule: "0 8,20 * * *"  # Twice daily at 8 AM and 8 PM
+    enabled: true
+    priority: "medium"
+    timeout: "40m"
+    
+    command:
+       type: "python"
+       script: "mlops/ml_prediction_cli.py"
+       args:
+         - "--task=topic_emergence"
+    
+    dependencies:
+      - "theme_extraction"
+    
+    notifications:
+      on_success:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/topic-emergence-detected"
+      on_failure:
+        - type: "webhook"
+          url: "${WEBHOOK_URL}/ml-prediction-failure"
+    
+    metrics:
+      - name: "new_topics_detected"
+        type: "counter"
+      - name: "topic_emergence_confidence"
+        type: "histogram"
+
   # Health Check (Every 5 minutes)
   health_check:
     name: "System Health Check"
@@ -330,7 +446,7 @@ backup:
 # Feature flags
 features:
   advanced_analytics: true
-  ml_predictions: false  # TODO: Enable when ML models are ready
+  ml_predictions: true   # ✅ Enabled with transformer-based ML prediction service
   real_time_processing: true
   distributed_processing: false
   auto_scaling: true

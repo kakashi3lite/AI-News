@@ -1,0 +1,422 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-news-dashboard.com/schemas/rse_markdown.json",
+  "title": "RSE Markdown Content Schema",
+  "description": "Schema for validating RSE content in Markdown format with YAML frontmatter",
+  "type": "object",
+  "properties": {
+    "frontmatter": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 200,
+          "description": "Title of the RSE content"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 1000,
+          "description": "Brief summary of the content"
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Publication date in YYYY-MM-DD format"
+        },
+        "author": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 100
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "affiliation": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "orcid": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9X]$"
+                },
+                "github": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]){0,38}$"
+                }
+              },
+              "required": ["name"]
+            }
+          ],
+          "description": "Author information (string or object)"
+        },
+        "domain": {
+          "type": "string",
+          "enum": [
+            "Machine Learning",
+            "Data Science",
+            "Software Engineering",
+            "Research Computing",
+            "High Performance Computing",
+            "Scientific Software",
+            "Digital Humanities",
+            "Artificial Intelligence",
+            "Natural Language Processing",
+            "Computer Vision",
+            "Bioinformatics",
+            "Computational Physics",
+            "Quantum Computing",
+            "Cybersecurity",
+            "DevOps",
+            "Cloud Computing",
+            "Other"
+          ],
+          "description": "Primary domain or field of the content"
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "minItems": 1,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "description": "Keywords associated with the content"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 30
+          },
+          "uniqueItems": true,
+          "description": "Tags for categorization"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["research", "development", "tools", "methods", "tutorial", "review", "opinion", "news"]
+          },
+          "uniqueItems": true,
+          "description": "Content categories"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced", "expert"],
+          "description": "Difficulty level of the content"
+        },
+        "reading_time": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120,
+          "description": "Estimated reading time in minutes"
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+          "default": "en",
+          "description": "Language code (ISO 639-1)"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "doi": {
+              "type": "string",
+              "pattern": "^10\\.\\d+/.+$"
+            },
+            "publication": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "license": {
+              "type": "string",
+              "enum": ["CC0", "CC-BY", "CC-BY-SA", "CC-BY-NC", "CC-BY-NC-SA", "MIT", "Apache-2.0", "GPL-3.0", "BSD-3-Clause", "Other", "Unknown"]
+            }
+          }
+        },
+        "technologies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "uniqueItems": true,
+          "description": "Technologies mentioned in the content"
+        },
+        "programming_languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["Python", "R", "JavaScript", "Java", "C++", "C", "Go", "Rust", "Julia", "MATLAB", "Scala", "Ruby", "PHP", "Swift", "Kotlin", "TypeScript", "Other"]
+          },
+          "uniqueItems": true,
+          "description": "Programming languages discussed"
+        },
+        "peer_reviewed": {
+          "type": "boolean",
+          "description": "Whether the content has been peer reviewed"
+        },
+        "reproducible": {
+          "type": "boolean",
+          "description": "Whether the content includes reproducible elements"
+        },
+        "code_available": {
+          "type": "boolean",
+          "description": "Whether associated code is available"
+        },
+        "data_available": {
+          "type": "boolean",
+          "description": "Whether associated data is available"
+        },
+        "links": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "format": "uri",
+              "description": "Main code repository URL"
+            },
+            "documentation": {
+              "type": "string",
+              "format": "uri",
+              "description": "Documentation URL"
+            },
+            "demo": {
+              "type": "string",
+              "format": "uri",
+              "description": "Demo or live example URL"
+            },
+            "dataset": {
+              "type": "string",
+              "format": "uri",
+              "description": "Dataset URL"
+            },
+            "related": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              },
+              "description": "Related content URLs"
+            }
+          }
+        },
+        "rse_metadata": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^rse_[0-9]{8}_[a-z_]+_[a-f0-9]{8}$"
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "schema_version": {
+              "type": "string",
+              "enum": ["1.0.0"]
+            },
+            "validation_status": {
+              "type": "string",
+              "enum": ["pending", "validated", "rejected", "needs_review"]
+            }
+          },
+          "required": ["id", "version", "created_at", "schema_version"]
+        }
+      },
+      "required": ["title", "summary", "date", "author", "domain", "keywords"],
+      "additionalProperties": true
+    },
+    "content": {
+      "type": "string",
+      "minLength": 50,
+      "description": "Markdown content body",
+      "pattern": "^(?=.*[a-zA-Z]).+"
+    },
+    "structure": {
+      "type": "object",
+      "properties": {
+        "has_headings": {
+          "type": "boolean",
+          "description": "Whether the content has proper heading structure"
+        },
+        "heading_levels": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "description": "Heading levels found in the content"
+        },
+        "has_code_blocks": {
+          "type": "boolean",
+          "description": "Whether the content contains code blocks"
+        },
+        "has_links": {
+          "type": "boolean",
+          "description": "Whether the content contains links"
+        },
+        "has_images": {
+          "type": "boolean",
+          "description": "Whether the content contains images"
+        },
+        "has_tables": {
+          "type": "boolean",
+          "description": "Whether the content contains tables"
+        },
+        "word_count": {
+          "type": "integer",
+          "minimum": 10,
+          "description": "Approximate word count of the content"
+        },
+        "line_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of lines in the content"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "markdown_valid": {
+          "type": "boolean",
+          "description": "Whether the markdown syntax is valid"
+        },
+        "frontmatter_valid": {
+          "type": "boolean",
+          "description": "Whether the YAML frontmatter is valid"
+        },
+        "links_valid": {
+          "type": "boolean",
+          "description": "Whether all links are accessible"
+        },
+        "images_valid": {
+          "type": "boolean",
+          "description": "Whether all images are accessible"
+        },
+        "spelling_checked": {
+          "type": "boolean",
+          "description": "Whether spelling has been checked"
+        },
+        "grammar_checked": {
+          "type": "boolean",
+          "description": "Whether grammar has been checked"
+        },
+        "validation_errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["error", "warning", "info"]
+              },
+              "message": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": ["type", "message"]
+          },
+          "description": "Validation errors and warnings"
+        }
+      }
+    }
+  },
+  "required": ["frontmatter", "content"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "frontmatter": {
+        "title": "Introduction to Machine Learning in Scientific Computing",
+        "summary": "A comprehensive guide to applying machine learning techniques in scientific computing applications, covering neural networks, optimization, and practical implementation strategies.",
+        "date": "2024-12-01",
+        "author": {
+          "name": "Dr. Sarah Johnson",
+          "email": "sarah.johnson@university.edu",
+          "affiliation": "Department of Computer Science, University of Technology",
+          "orcid": "0000-0002-1234-5678"
+        },
+        "domain": "Machine Learning",
+        "keywords": ["machine learning", "scientific computing", "neural networks", "optimization"],
+        "tags": ["tutorial", "beginner-friendly", "python"],
+        "categories": ["tutorial", "methods"],
+        "difficulty": "intermediate",
+        "reading_time": 25,
+        "language": "en",
+        "technologies": ["TensorFlow", "NumPy", "SciPy", "Jupyter"],
+        "programming_languages": ["Python"],
+        "code_available": true,
+        "reproducible": true,
+        "links": {
+          "repository": "https://github.com/example/ml-scientific-computing",
+          "documentation": "https://ml-sci-computing.readthedocs.io",
+          "demo": "https://colab.research.google.com/drive/example"
+        },
+        "rse_metadata": {
+          "id": "rse_20241201_machine_learning_a1b2c3d4",
+          "version": "1.0.0",
+          "created_at": "2024-12-01T10:00:00Z",
+          "schema_version": "1.0.0",
+          "validation_status": "validated"
+        }
+      },
+      "content": "# Introduction to Machine Learning in Scientific Computing\n\nMachine learning has revolutionized many fields...\n\n## Getting Started\n\nTo begin with machine learning in scientific computing...\n\n```python\nimport numpy as np\nimport tensorflow as tf\n\n# Example code\nmodel = tf.keras.Sequential([...])\n```\n\n## Conclusion\n\nThis tutorial covered the basics of applying ML in scientific contexts.",
+      "structure": {
+        "has_headings": true,
+        "heading_levels": [1, 2],
+        "has_code_blocks": true,
+        "has_links": false,
+        "has_images": false,
+        "has_tables": false,
+        "word_count": 150,
+        "line_count": 15
+      },
+      "validation": {
+        "markdown_valid": true,
+        "frontmatter_valid": true,
+        "links_valid": true,
+        "spelling_checked": true,
+        "validation_errors": []
+      }
+    }
+  ]
+}

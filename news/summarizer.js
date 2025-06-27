@@ -16,6 +16,9 @@ const axios = require('axios');
 const crypto = require('crypto');
 const fs = require('fs').promises;
 const path = require('path');
+const { performance } = require('perf_hooks');
+const errorHandler = require('../lib/errorHandler');
+const { ERROR_TYPES } = require('../lib/errorHandler');
 const { queryO4Model } = require('../lib/o4ModelClient');
 const { queryOpenAI } = require('../lib/openaiClient');
 
@@ -105,77 +108,102 @@ class NLPSummarizationEngine {
   }
 
   async initializeCache() {
-    try {
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      console.log(`📁 Summary cache initialized: ${this.cacheDir}`);
-    } catch (error) {
-      console.error('Failed to initialize summary cache:', error);
-    }
+    return await errorHandler.executeWithErrorHandling(
+      async () => {
+        await fs.mkdir(this.cacheDir, { recursive: true });
+        console.log(`📁 Cache directory initialized: ${this.cacheDir}`);
+        this.cacheEnabled = true;
+      },
+      {
+        name: 'initialize_cache',
+        retryOptions: {
+          maxRetries: 2,
+          retryableErrors: [ERROR_TYPES.FILESYSTEM]
+        },
+        fallback: async () => {
+          console.log('⚠️  Cache initialization failed, disabling cache');
+          this.cacheEnabled = false;
+        }
+      }
+    );
   }
 
   /**
    * Main summarization method
    */
   async summarizeContent(content, options = {}) {
-    const config = {
-      type: options.type || 'standard',
-      style: options.style || 'abstractive',
-      model: options.model || this.defaultModel,
-      language: options.language || 'en',
-      includeMetrics: options.includeMetrics || false,
-      ...options
-    };
+    return await errorHandler.executeWithErrorHandling(
+      async () => {
+        const config = {
+          type: options.type || 'standard',
+          style: options.style || 'abstractive',
+          model: options.model || this.defaultModel,
+          language: options.language || 'en',
+          includeMetrics: options.includeMetrics || false,
+          ...options
+        };
 
-    console.log(`🤖 Summarizing content with ${config.model} (${config.style}/${config.type})`);
-    
-    const startTime = Date.now();
-    
-    try {
-      // Check cache first
-      const cacheKey = this.generateCacheKey(content, config);
-      if (this.cacheEnabled) {
-        const cached = await this.getCachedSummary(cacheKey);
-        if (cached) {
-          console.log('📋 Using cached summary');
-          return {
-            ...cached,
-            cached: true,
-            processingTime: Date.now() - startTime
-          };
+        console.log(`🤖 Summarizing content with ${config.model} (${config.style}/${config.type})`);
+        
+        const startTime = Date.now();
+        
+        // Check cache first
+        const cacheKey = this.generateCacheKey(content, config);
+        if (this.cacheEnabled) {
+          const cached = await this.getCachedSummary(cacheKey);
+          if (cached) {
+            console.log('📋 Using cached summary');
+            return {
+              ...cached,
+              cached: true,
+              processingTime: Date.now() - startTime
+            };
+          }
+        }
+
+        // Validate and prepare content
+        const processedContent = this.preprocessContent(content);
+        if (!processedContent) {
+          throw new Error('Content is empty or invalid');
+        }
+
+        // Generate summary
+        const summary = await this.generateSummary(processedContent, config);
+        
+        // Post-process and enhance
+        const enhancedSummary = await this.enhanceSummary(summary, config);
+        
+        // Cache result
+        if (this.cacheEnabled) {
+          await this.cacheSummary(cacheKey, enhancedSummary);
+        }
+
+        const result = {
+          ...enhancedSummary,
+          cached: false,
+          processingTime: Date.now() - startTime,
+          config
+        };
+
+        console.log(`✅ Summary generated in ${result.processingTime}ms`);
+        return result;
+      },
+      {
+        name: 'summarize_content',
+        retryOptions: {
+          maxRetries: 2,
+          retryableErrors: [ERROR_TYPES.NETWORK, ERROR_TYPES.EXTERNAL_API, ERROR_TYPES.RATE_LIMIT]
+        },
+        circuitBreakerOptions: {
+          failureThreshold: 3,
+          resetTimeout: 600000
+        },
+        fallback: async () => {
+          console.log('🔄 Using fallback summarization...');
+          return await this.fallbackSummarization(content, options);
         }
       }
-
-      // Validate and prepare content
-      const processedContent = this.preprocessContent(content);
-      if (!processedContent) {
-        throw new Error('Content is empty or invalid');
-      }
-
-      // Generate summary
-      const summary = await this.generateSummary(processedContent, config);
-      
-      // Post-process and enhance
-      const enhancedSummary = await this.enhanceSummary(summary, config);
-      
-      // Cache result
-      if (this.cacheEnabled) {
-        await this.cacheSummary(cacheKey, enhancedSummary);
-      }
-
-      const result = {
-        ...enhancedSummary,
-        cached: false,
-        processingTime: Date.now() - startTime,
-        config
-      };
-
-      console.log(`✅ Summary generated in ${result.processingTime}ms`);
-      return result;
-      
-    } catch (error) {
-      console.error('❌ Summarization failed:', error.message);
-      throw new Error(`Summarization failed: ${error.message}`);
-    }
+    );
   }
 
   /**
@@ -571,6 +599,82 @@ class NLPSummarizationEngine {
     return crypto.createHash('md5')
       .update(JSON.stringify(keyData))
       .digest('hex');
+  }
+
+  /**
+   * Fallback summarization using simple extraction
+   */
+  async fallbackSummarization(content, options = {}) {
+    try {
+      console.log('🔄 Using fallback summarization method...');
+      
+      if (Array.isArray(content)) {
+        // Handle array of articles
+        return {
+          summaries: content.map(article => this.createFallbackSummary(article)),
+          metadata: {
+            totalArticles: content.length,
+            processedArticles: content.length,
+            processingTime: 0,
+            method: 'fallback'
+          }
+        };
+      } else {
+        // Handle single content
+        return this.createFallbackSummary(content);
+      }
+    } catch (error) {
+      console.error('❌ Fallback summarization failed:', error.message);
+      return this.createEmergencySummary(content);
+    }
+  }
+
+  /**
+   * Create a basic fallback summary
+   */
+  createFallbackSummary(article) {
+    try {
+      const content = article.content || article.description || article.title || '';
+      const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
+      
+      // Take first 2-3 sentences as summary
+      const summary = sentences.slice(0, 3).join('. ').trim();
+      
+      return {
+        id: article.id || 'fallback_' + Date.now(),
+        title: article.title || 'Untitled',
+        summary: summary || 'Summary not available',
+        originalLength: content.length,
+        summaryLength: summary.length,
+        compressionRatio: content.length > 0 ? summary.length / content.length : 0,
+        method: 'fallback_extraction',
+        confidence: 0.5,
+        cached: false,
+        processingTime: 0
+      };
+    } catch (error) {
+      console.error('❌ Failed to create fallback summary:', error.message);
+      return this.createEmergencySummary(article);
+    }
+  }
+
+  /**
+   * Create emergency summary when all else fails
+   */
+  createEmergencySummary(content) {
+    return {
+      id: 'emergency_' + Date.now(),
+      title: typeof content === 'object' ? (content.title || 'Content') : 'Content',
+      summary: 'Summary temporarily unavailable due to processing issues.',
+      originalLength: 0,
+      summaryLength: 0,
+      compressionRatio: 0,
+      method: 'emergency',
+      confidence: 0,
+      cached: false,
+      processingTime: 0,
+      error: 'Summarization service unavailable'
+    };
   }
 
   /**

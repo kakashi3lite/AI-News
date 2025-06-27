@@ -1,0 +1,19 @@
+{
+  "task": "popularity_prediction",
+  "status": "error",
+  "error": "X has 8 features, but StandardScaler is expecting 10 features as input.",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:21:21.312384",
+    "end_time": "2025-06-27T08:21:33.080233",
+    "total_execution_time": 11.767849,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "popularity_prediction",
+      "horizon": "24h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

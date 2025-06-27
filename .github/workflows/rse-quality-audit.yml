@@ -1,0 +1,362 @@
+name: RSE Quality Audit
+
+# Trigger the workflow on pull requests and pushes to main
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'news/**'
+      - '**/*.js'
+      - '**/*.json'
+      - '**/*.md'
+      - 'tests/**'
+      - 'package.json'
+      - '.github/workflows/**'
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allow manual triggering
+
+# Set permissions for the workflow
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  statuses: write
+
+jobs:
+  rse-quality-audit:
+    name: RSE Quality Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better analysis
+      
+      # Setup Node.js environment
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      # Install dependencies
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm install ajv ajv-formats --save-dev
+      
+      # Cache node_modules for faster builds
+      - name: Cache Node Modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      # Run existing tests first
+      - name: Run Existing Tests
+        run: npm test
+        continue-on-error: false
+      
+      # Run linting
+      - name: Run Linting
+        run: npm run lint
+        continue-on-error: false
+      
+      # Run RSE Quality Auditor tests
+      - name: Test RSE Quality Auditor
+        run: node tests/rse-audit.test.js
+        continue-on-error: false
+      
+      # Run full RSE Quality Audit
+      - name: Run RSE Quality Audit
+        id: rse-audit
+        run: |
+          echo "Running RSE Quality Audit..."
+          node rse-audit-bot.js audit > audit-output.txt 2>&1
+          echo "audit_exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      # Upload audit report as artifact
+      - name: Upload Audit Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: rse-audit-report-node-${{ matrix.node-version }}
+          path: |
+            .rse-audit/audit-report.json
+            .rse-audit/audit.log
+            audit-output.txt
+          retention-days: 30
+      
+      # Parse audit results for PR comment
+      - name: Parse Audit Results
+        id: parse-results
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f ".rse-audit/audit-report.json" ]; then
+            echo "Audit report found, parsing results..."
+            
+            # Extract key metrics from the audit report
+            OVERALL_STATUS=$(jq -r '.overall // "unknown"' .rse-audit/audit-report.json)
+            SUCCESS_RATE=$(jq -r '.summary.successRate // 0' .rse-audit/audit-report.json)
+            COVERAGE=$(jq -r '.coverage.percentage // 0' .rse-audit/audit-report.json)
+            
+            echo "overall_status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
+            echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+            echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+            
+            # Create summary for PR comment
+            cat > pr-comment.md << EOF
+          ## 🤖 RSE Quality Audit Report (Node.js ${{ matrix.node-version }})
+          
+          **Overall Status:** $([ "$OVERALL_STATUS" = "passed" ] && echo "✅ PASSED" || echo "❌ FAILED")
+          **Success Rate:** ${SUCCESS_RATE}%
+          **Test Coverage:** ${COVERAGE}%
+          
+          ### 📊 Detailed Results
+          
+          | Check | Passed | Failed |
+          |-------|--------|---------|
+          | Tests | $(jq -r '.tests.passed // 0' .rse-audit/audit-report.json) | $(jq -r '.tests.failed // 0' .rse-audit/audit-report.json) |
+          | Linting | $(jq -r '.linting.passed // 0' .rse-audit/audit-report.json) | $(jq -r '.linting.failed // 0' .rse-audit/audit-report.json) |
+          | Schema | $(jq -r '.schema.passed // 0' .rse-audit/audit-report.json) | $(jq -r '.schema.failed // 0' .rse-audit/audit-report.json) |
+          | Markdown | $(jq -r '.markdown.passed // 0' .rse-audit/audit-report.json) | $(jq -r '.markdown.failed // 0' .rse-audit/audit-report.json) |
+          
+          EOF
+          
+          # Add recommendations if any
+          RECOMMENDATIONS=$(jq -r '.recommendations[]? // empty' .rse-audit/audit-report.json)
+          if [ ! -z "$RECOMMENDATIONS" ]; then
+            echo "### 💡 Recommendations" >> pr-comment.md
+            echo "" >> pr-comment.md
+            echo "$RECOMMENDATIONS" | while read -r rec; do
+              echo "- $rec" >> pr-comment.md
+            done
+            echo "" >> pr-comment.md
+          fi
+          
+          echo "---" >> pr-comment.md
+          echo "*Generated by RSE Quality Auditor v1 on $(date)*" >> pr-comment.md
+          
+          else
+            echo "No audit report found, creating basic comment..."
+            cat > pr-comment.md << EOF
+          ## 🤖 RSE Quality Audit Report (Node.js ${{ matrix.node-version }})
+          
+          **Status:** ❌ FAILED
+          
+          The RSE Quality Audit could not complete successfully. Please check the workflow logs for details.
+          
+          ---
+          *Generated by RSE Quality Auditor v1 on $(date)*
+          EOF
+          fi
+      
+      # Comment on PR with audit results
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read the comment content
+            let commentBody;
+            try {
+              commentBody = fs.readFileSync('pr-comment.md', 'utf8');
+            } catch (error) {
+              commentBody = `## 🤖 RSE Quality Audit Report (Node.js ${{ matrix.node-version }})
+            
+            **Status:** ❌ FAILED
+            
+            Could not generate audit report. Please check the workflow logs.
+            
+            ---
+            *Generated by RSE Quality Auditor v1*`;
+            }
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('RSE Quality Audit Report') &&
+              comment.body.includes('Node.js ${{ matrix.node-version }}')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+            }
+      
+      # Set check status
+      - name: Set Check Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const auditExitCode = '${{ steps.rse-audit.outputs.audit_exit_code }}';
+            const overallStatus = '${{ steps.parse-results.outputs.overall_status }}';
+            
+            const state = (auditExitCode === '0' && overallStatus === 'passed') ? 'success' : 'failure';
+            const description = state === 'success' ? 
+              'RSE Quality Audit passed' : 
+              'RSE Quality Audit failed - check details';
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: state,
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: description,
+              context: 'RSE Quality Audit / Node.js ${{ matrix.node-version }}'
+            });
+      
+      # Fail the job if audit failed
+      - name: Check Audit Status
+        if: steps.rse-audit.outputs.audit_exit_code != '0'
+        run: |
+          echo "RSE Quality Audit failed with exit code ${{ steps.rse-audit.outputs.audit_exit_code }}"
+          echo "Please review the audit report and fix the issues before merging."
+          exit 1
+
+  # Aggregate results from all Node.js versions
+  audit-summary:
+    name: Audit Summary
+    runs-on: ubuntu-latest
+    needs: rse-quality-audit
+    if: always() && github.event_name == 'pull_request'
+    
+    steps:
+      - name: Download All Audit Reports
+        uses: actions/download-artifact@v3
+        with:
+          path: audit-reports
+      
+      - name: Create Summary Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let summaryComment = `## 📋 RSE Quality Audit Summary\n\n`;
+            
+            // Check if audit-reports directory exists
+            if (fs.existsSync('audit-reports')) {
+              const reportDirs = fs.readdirSync('audit-reports');
+              
+              summaryComment += `| Node.js Version | Status | Success Rate | Coverage |\n`;
+              summaryComment += `|----------------|--------|--------------|----------|\n`;
+              
+              for (const dir of reportDirs) {
+                const nodeVersion = dir.replace('rse-audit-report-node-', '');
+                const reportPath = path.join('audit-reports', dir, 'audit-report.json');
+                
+                if (fs.existsSync(reportPath)) {
+                  try {
+                    const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+                    const status = report.overall === 'passed' ? '✅ PASSED' : '❌ FAILED';
+                    const successRate = report.summary?.successRate || 0;
+                    const coverage = report.coverage?.percentage || 0;
+                    
+                    summaryComment += `| ${nodeVersion} | ${status} | ${successRate}% | ${coverage}% |\n`;
+                  } catch (error) {
+                    summaryComment += `| ${nodeVersion} | ❌ ERROR | - | - |\n`;
+                  }
+                } else {
+                  summaryComment += `| ${nodeVersion} | ❌ NO REPORT | - | - |\n`;
+                }
+              }
+            } else {
+              summaryComment += `No audit reports found.\n`;
+            }
+            
+            summaryComment += `\n---\n*RSE Quality Auditor v1 - Multi-version Summary*`;
+            
+            // Find and update/create summary comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const summaryCommentObj = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('RSE Quality Audit Summary')
+            );
+            
+            if (summaryCommentObj) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: summaryCommentObj.id,
+                body: summaryComment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summaryComment
+              });
+            }
+
+  # Security scan for sensitive data
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified

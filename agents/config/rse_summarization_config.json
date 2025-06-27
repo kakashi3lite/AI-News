@@ -1,0 +1,250 @@
+{
+  "id": "rse-summary-bot-v1",
+  "name": "RSE Summarization Engineer",
+  "version": "1.0.0",
+  "description": "Processes raw RSE articles to generate 2–3 sentence summaries and assigns domain tags using advanced NLP techniques.",
+  "capabilities": [
+    "NLP summarization using AI skill orchestrator",
+    "Domain classification across 7 categories",
+    "Key-phrase extraction",
+    "Confidence scoring",
+    "Batch processing",
+    "Caching and performance optimization",
+    "Integration with OpenAI and ML model registry"
+  ],
+  "tools": [
+    "openai_api",
+    "ml_model_registry",
+    "skill_orchestrator",
+    "nlp_pipeline"
+  ],
+  "configuration": {
+    "base_url": "http://localhost:3000",
+    "cache_dir": "./cache/rse_summaries",
+    "max_summary_length": 300,
+    "min_summary_length": 100,
+    "confidence_threshold": 0.7,
+    "rate_limits": {
+      "requests_per_minute": 60,
+      "concurrent_requests": 5,
+      "batch_size": 10
+    },
+    "models": {
+      "primary": "gpt-3.5-turbo",
+      "fallback": "o4-mini-high",
+      "temperature": 0.3,
+      "max_tokens": 256
+    },
+    "summarization": {
+      "target_sentences": 3,
+      "focus_areas": [
+        "technical_contribution",
+        "software_engineering_aspect",
+        "rse_community_impact"
+      ],
+      "style": "concise_technical",
+      "include_metrics": true
+    }
+  },
+  "domain_categories": {
+    "research_computing": {
+      "description": "Research computing infrastructure and cyberinfrastructure",
+      "keywords": [
+        "research computing",
+        "computational research",
+        "scientific computing",
+        "research infrastructure",
+        "cyberinfrastructure",
+        "grid computing",
+        "cloud computing",
+        "research platforms"
+      ],
+      "weight": 1.0
+    },
+    "software_engineering": {
+      "description": "Software engineering practices and methodologies",
+      "keywords": [
+        "software engineering",
+        "code quality",
+        "testing",
+        "debugging",
+        "version control",
+        "continuous integration",
+        "agile",
+        "devops",
+        "software architecture",
+        "design patterns"
+      ],
+      "weight": 1.0
+    },
+    "data_science": {
+      "description": "Data science and analytics in research contexts",
+      "keywords": [
+        "data science",
+        "data analysis",
+        "statistics",
+        "visualization",
+        "big data",
+        "analytics",
+        "data mining",
+        "data processing",
+        "data management",
+        "reproducible research"
+      ],
+      "weight": 1.0
+    },
+    "high_performance_computing": {
+      "description": "High-performance and parallel computing systems",
+      "keywords": [
+        "hpc",
+        "high performance computing",
+        "parallel computing",
+        "supercomputing",
+        "cluster computing",
+        "distributed computing",
+        "mpi",
+        "openmp",
+        "cuda",
+        "gpu computing"
+      ],
+      "weight": 1.0
+    },
+    "machine_learning": {
+      "description": "Machine learning and AI applications in research",
+      "keywords": [
+        "machine learning",
+        "artificial intelligence",
+        "deep learning",
+        "neural networks",
+        "ai",
+        "ml",
+        "tensorflow",
+        "pytorch",
+        "scikit-learn",
+        "computer vision",
+        "natural language processing"
+      ],
+      "weight": 1.0
+    },
+    "scientific_software": {
+      "description": "Scientific and computational software development",
+      "keywords": [
+        "scientific software",
+        "research software",
+        "computational tools",
+        "simulation",
+        "modeling",
+        "numerical methods",
+        "algorithms",
+        "scientific libraries",
+        "computational frameworks"
+      ],
+      "weight": 1.0
+    },
+    "digital_humanities": {
+      "description": "Digital humanities and computational social sciences",
+      "keywords": [
+        "digital humanities",
+        "computational humanities",
+        "text mining",
+        "digital scholarship",
+        "cultural analytics",
+        "humanities computing",
+        "digital archives",
+        "computational social science"
+      ],
+      "weight": 1.0
+    }
+  },
+  "api_endpoints": {
+    "summarize": "/api/summarize",
+    "health": "/api/health",
+    "metrics": "/api/metrics",
+    "classify": "/api/classify"
+  },
+  "authentication": {
+    "openai_api_key_env": "OPENAI_API_KEY",
+    "required_env_vars": [
+      "OPENAI_API_KEY"
+    ]
+  },
+  "output_format": {
+    "json_schema": {
+      "title": "string",
+      "date": "string (ISO format)",
+      "summary": "string (2-3 sentences)",
+      "domain": "string (category)",
+      "confidence_score": "float (0.0-1.0)",
+      "key_phrases": "array of strings",
+      "processing_time": "float (seconds)",
+      "model_used": "string",
+      "word_count": "integer"
+    },
+    "example": {
+      "title": "Improving Research Software Sustainability Through Automated Testing",
+      "date": "2024-01-15T10:30:00Z",
+      "summary": "This study presents a comprehensive framework for implementing automated testing in research software projects to improve code quality and long-term sustainability. The authors demonstrate how continuous integration practices can reduce bugs by 40% and increase developer confidence in scientific software. The framework has been successfully adopted by multiple research groups, showing significant improvements in software reliability and maintainability.",
+      "domain": "software_engineering",
+      "confidence_score": 0.85,
+      "key_phrases": ["automated testing", "research software", "continuous integration", "code quality", "sustainability"],
+      "processing_time": 2.3,
+      "model_used": "gpt-3.5-turbo",
+      "word_count": 45
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "rse_summarization_engineer.log",
+    "max_size_mb": 10,
+    "backup_count": 5
+  },
+  "monitoring": {
+    "metrics_collection": true,
+    "performance_tracking": true,
+    "error_reporting": true,
+    "health_check_interval": 300,
+    "alert_thresholds": {
+      "success_rate_min": 0.9,
+      "avg_processing_time_max": 10.0,
+      "error_rate_max": 0.1
+    }
+  },
+  "prompt_template": {
+    "system": "Let's think step by step:\n1. Receive raw article text.\n2. Invoke the 'Summarize' skill from SkillOrchestrator.js.\n3. Extract domain via keyword matching and AI inference.\n4. Return JSON with `title`, `date`, `summary`, and `domain` fields.\n5. Self-critique summary length and fidelity.",
+    "user": "{{user_input}}",
+    "summarization_prompt": "Summarize the following RSE article in 2-3 clear, concise sentences. Focus on:\n1. The main technical contribution or research finding\n2. The software engineering or computational aspect\n3. The potential impact on the RSE community\n\nArticle:\nTitle: {{title}}\nContent: {{content}}\n\nSummary:",
+    "classification_prompt": "Classify the following RSE article into one of these domains: research_computing, software_engineering, data_science, high_performance_computing, machine_learning, scientific_software, digital_humanities, other.\n\nArticle: {{title}} - {{content}}\n\nDomain:"
+  },
+  "examples": {
+    "cli_usage": [
+      "python rse_summarization_engineer.py --input articles.json --output summaries.json",
+      "python rse_summarization_engineer.py --health-check",
+      "python rse_summarization_engineer.py --metrics",
+      "python rse_summarization_engineer.py --config custom_config.json --input batch.json"
+    ],
+    "api_usage": [
+      "POST /api/rse/summarize with article data",
+      "GET /api/rse/health for health status",
+      "GET /api/rse/metrics for performance metrics"
+    ]
+  },
+  "integration": {
+    "ai_news_dashboard": {
+      "enabled": true,
+      "endpoints": [
+        "/api/summarize",
+        "/api/news"
+      ]
+    },
+    "mlops_pipeline": {
+      "enabled": true,
+      "model_registry": true,
+      "monitoring": true
+    },
+    "skill_orchestrator": {
+      "enabled": true,
+      "fallback_strategy": "direct_api_call"
+    }
+  }
+}

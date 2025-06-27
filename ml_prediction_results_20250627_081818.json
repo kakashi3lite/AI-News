@@ -1,0 +1,22 @@
+{
+  "task": "trend_forecasting",
+  "status": "success",
+  "predicted_value": -0.025058921426534653,
+  "confidence_score": 0.4937356412410736,
+  "model_used": "lstm_trend_forecaster",
+  "model_version": "v1.2.0",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:18:02.548406",
+    "end_time": "2025-06-27T08:18:18.185423",
+    "total_execution_time": 15.637017,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "trend_forecasting",
+      "horizon": "1h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

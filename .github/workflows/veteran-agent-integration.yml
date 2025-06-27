@@ -1,0 +1,628 @@
+name: Veteran Developer Agent Integration
+
+# Trigger the workflow on various events
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily architecture analysis at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      analysis_type:
+        description: 'Type of analysis to run'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - security
+        - performance
+        - architecture
+      target_branch:
+        description: 'Target branch for analysis'
+        required: false
+        default: 'main'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  AGENT_CONFIG_PATH: './agents/config/agent_config.yaml'
+  MLOPS_CONFIG_PATH: './mlops/config.yaml'
+
+jobs:
+  # Job 1: Setup and validation
+  setup-validation:
+    name: Setup and Validation
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-security: ${{ steps.determine-scope.outputs.security }}
+      should-run-performance: ${{ steps.determine-scope.outputs.performance }}
+      should-run-architecture: ${{ steps.determine-scope.outputs.architecture }}
+      changed-files: ${{ steps.changed-files.outputs.files }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install Agent dependencies
+      run: |
+        cd agents
+        pip install -r requirements.txt
+    
+    - name: Validate Agent configuration
+      run: |
+        python -c "
+        import yaml
+        with open('${{ env.AGENT_CONFIG_PATH }}', 'r') as f:
+            config = yaml.safe_load(f)
+        print('Agent configuration is valid')
+        "
+    
+    - name: Get changed files
+      id: changed-files
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+        else
+          FILES=$(git diff --name-only HEAD~1 HEAD)
+        fi
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Determine analysis scope
+      id: determine-scope
+      run: |
+        CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+        ANALYSIS_TYPE="${{ github.event.inputs.analysis_type || 'auto' }}"
+        
+        # Default to running all analyses
+        SECURITY="true"
+        PERFORMANCE="true"
+        ARCHITECTURE="true"
+        
+        # Adjust based on manual input
+        if [ "$ANALYSIS_TYPE" = "security" ]; then
+          PERFORMANCE="false"
+          ARCHITECTURE="false"
+        elif [ "$ANALYSIS_TYPE" = "performance" ]; then
+          SECURITY="false"
+          ARCHITECTURE="false"
+        elif [ "$ANALYSIS_TYPE" = "architecture" ]; then
+          SECURITY="false"
+          PERFORMANCE="false"
+        fi
+        
+        # Smart detection based on changed files
+        if [ "$ANALYSIS_TYPE" = "auto" ] && [ -n "$CHANGED_FILES" ]; then
+          if echo "$CHANGED_FILES" | grep -E "\.(py|js|ts|jsx|tsx)$" > /dev/null; then
+            echo "Code changes detected, running security and performance analysis"
+          elif echo "$CHANGED_FILES" | grep -E "(docker|k8s|infrastructure|mlops)" > /dev/null; then
+            echo "Infrastructure changes detected, running architecture analysis"
+            SECURITY="false"
+            PERFORMANCE="false"
+          elif echo "$CHANGED_FILES" | grep -E "\.(md|txt|yml|yaml)$" > /dev/null; then
+            echo "Documentation changes detected, running light analysis"
+            PERFORMANCE="false"
+          fi
+        fi
+        
+        echo "security=$SECURITY" >> $GITHUB_OUTPUT
+        echo "performance=$PERFORMANCE" >> $GITHUB_OUTPUT
+        echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
+
+  # Job 2: Security Analysis
+  security-analysis:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    needs: setup-validation
+    if: needs.setup-validation.outputs.should-run-security == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        cd agents
+        pip install -r requirements.txt
+    
+    - name: Run Veteran Agent Security Audit
+      id: security-audit
+      run: |
+        cd agents
+        python agent_cli.py security-audit \
+          --target-path "../" \
+          --output-format "github" \
+          --severity-threshold "medium" \
+          --output-file "../security-report.json"
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-analysis-report
+        path: security-report.json
+    
+    - name: Comment on PR with security findings
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = JSON.parse(fs.readFileSync('security-report.json', 'utf8'));
+            
+            let comment = '## 🔒 Security Analysis Report\n\n';
+            
+            if (report.findings && report.findings.length > 0) {
+              const critical = report.findings.filter(f => f.severity === 'critical').length;
+              const high = report.findings.filter(f => f.severity === 'high').length;
+              const medium = report.findings.filter(f => f.severity === 'medium').length;
+              
+              comment += `**Summary:** Found ${report.findings.length} security issues\n`;
+              comment += `- 🔴 Critical: ${critical}\n`;
+              comment += `- 🟠 High: ${high}\n`;
+              comment += `- 🟡 Medium: ${medium}\n\n`;
+              
+              if (critical > 0 || high > 0) {
+                comment += '### ⚠️ High Priority Issues\n\n';
+                report.findings
+                  .filter(f => f.severity === 'critical' || f.severity === 'high')
+                  .slice(0, 5)
+                  .forEach(finding => {
+                    comment += `**${finding.rule_id}** (${finding.severity})\n`;
+                    comment += `📁 \`${finding.file_path}\`:${finding.line_number}\n`;
+                    comment += `${finding.message}\n`;
+                    if (finding.suggestion) {
+                      comment += `💡 *Suggestion: ${finding.suggestion}*\n`;
+                    }
+                    comment += '\n';
+                  });
+              }
+              
+              if (report.recommendations && report.recommendations.length > 0) {
+                comment += '### 📋 Recommendations\n\n';
+                report.recommendations.slice(0, 3).forEach(rec => {
+                  comment += `- ${rec}\n`;
+                });
+              }
+            } else {
+              comment += '✅ No security issues found!';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('Error reading security report:', error);
+          }
+    
+    - name: Fail on critical security issues
+      run: |
+        if [ -f "security-report.json" ]; then
+          CRITICAL_COUNT=$(jq '[.findings[] | select(.severity == "critical")] | length' security-report.json)
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "❌ Found $CRITICAL_COUNT critical security issues. Failing the build."
+            exit 1
+          fi
+        fi
+
+  # Job 3: Performance Analysis
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    needs: setup-validation
+    if: needs.setup-validation.outputs.should-run-performance == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd agents
+        pip install -r requirements.txt
+    
+    - name: Run Performance Analysis
+      id: performance-analysis
+      run: |
+        cd agents
+        python agent_cli.py performance-analysis \
+          --target-path "../" \
+          --include-patterns "*.py,*.js,*.jsx,*.ts,*.tsx" \
+          --output-format "github" \
+          --output-file "../performance-report.json"
+    
+    - name: Run Lighthouse CI (for frontend)
+      if: contains(needs.setup-validation.outputs.changed-files, 'app/') || contains(needs.setup-validation.outputs.changed-files, 'components/')
+      run: |
+        npm install -g @lhci/cli
+        # Start development server in background
+        npm run dev &
+        sleep 30
+        
+        # Run Lighthouse CI
+        lhci autorun --config=.lighthouserc.json || true
+        
+        # Stop development server
+        pkill -f "npm run dev" || true
+    
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-analysis-report
+        path: performance-report.json
+    
+    - name: Comment on PR with performance findings
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = JSON.parse(fs.readFileSync('performance-report.json', 'utf8'));
+            
+            let comment = '## ⚡ Performance Analysis Report\n\n';
+            
+            if (report.findings && report.findings.length > 0) {
+              comment += `**Summary:** Found ${report.findings.length} performance issues\n\n`;
+              
+              const highImpact = report.findings.filter(f => f.severity === 'high').length;
+              const mediumImpact = report.findings.filter(f => f.severity === 'medium').length;
+              
+              comment += `- 🔴 High Impact: ${highImpact}\n`;
+              comment += `- 🟡 Medium Impact: ${mediumImpact}\n\n`;
+              
+              if (highImpact > 0) {
+                comment += '### 🚀 High Impact Optimizations\n\n';
+                report.findings
+                  .filter(f => f.severity === 'high')
+                  .slice(0, 3)
+                  .forEach(finding => {
+                    comment += `**${finding.rule_id}**\n`;
+                    comment += `📁 \`${finding.file_path}\`:${finding.line_number}\n`;
+                    comment += `${finding.message}\n`;
+                    if (finding.suggestion) {
+                      comment += `💡 *Suggestion: ${finding.suggestion}*\n`;
+                    }
+                    comment += '\n';
+                  });
+              }
+            } else {
+              comment += '✅ No significant performance issues found!';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('Error reading performance report:', error);
+          }
+
+  # Job 4: Architecture Analysis
+  architecture-analysis:
+    name: Architecture Analysis
+    runs-on: ubuntu-latest
+    needs: setup-validation
+    if: needs.setup-validation.outputs.should-run-architecture == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        cd agents
+        pip install -r requirements.txt
+    
+    - name: Run Architecture Analysis
+      id: architecture-analysis
+      run: |
+        cd agents
+        python agent_cli.py architecture-analysis \
+          --target-path "../" \
+          --analysis-depth "comprehensive" \
+          --output-format "github" \
+          --output-file "../architecture-report.json"
+    
+    - name: Generate Architecture Diagram
+      run: |
+        cd agents
+        python -c "
+        from veteran_developer_agent import VeteranDeveloperAgent
+        import json
+        
+        agent = VeteranDeveloperAgent('config/agent_config.yaml')
+        
+        # Generate architecture visualization
+        diagram_data = agent.generate_architecture_diagram('../')
+        
+        with open('../architecture-diagram.json', 'w') as f:
+            json.dump(diagram_data, f, indent=2)
+        "
+    
+    - name: Upload architecture reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: architecture-analysis-report
+        path: |
+          architecture-report.json
+          architecture-diagram.json
+    
+    - name: Comment on PR with architecture findings
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          try {
+            const report = JSON.parse(fs.readFileSync('architecture-report.json', 'utf8'));
+            
+            let comment = '## 🏗️ Architecture Analysis Report\n\n';
+            
+            if (report.recommendations && report.recommendations.length > 0) {
+              comment += `**Summary:** Found ${report.recommendations.length} architecture recommendations\n\n`;
+              
+              comment += '### 🎯 Key Recommendations\n\n';
+              report.recommendations.slice(0, 5).forEach((rec, index) => {
+                comment += `${index + 1}. ${rec}\n`;
+              });
+              comment += '\n';
+            }
+            
+            if (report.metrics) {
+              comment += '### 📊 Architecture Metrics\n\n';
+              comment += `- **Complexity Score:** ${report.metrics.complexity_score || 'N/A'}\n`;
+              comment += `- **Maintainability Index:** ${report.metrics.maintainability_index || 'N/A'}\n`;
+              comment += `- **Technical Debt Ratio:** ${report.metrics.technical_debt_ratio || 'N/A'}\n\n`;
+            }
+            
+            if (report.next_steps && report.next_steps.length > 0) {
+              comment += '### 📋 Next Steps\n\n';
+              report.next_steps.slice(0, 3).forEach(step => {
+                comment += `- ${step}\n`;
+              });
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('Error reading architecture report:', error);
+          }
+
+  # Job 5: MLOps Integration
+  mlops-integration:
+    name: MLOps Integration
+    runs-on: ubuntu-latest
+    needs: [security-analysis, performance-analysis, architecture-analysis]
+    if: always() && (needs.security-analysis.result == 'success' || needs.security-analysis.result == 'skipped') && (needs.performance-analysis.result == 'success' || needs.performance-analysis.result == 'skipped') && (needs.architecture-analysis.result == 'success' || needs.architecture-analysis.result == 'skipped')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        cd agents
+        pip install -r requirements.txt
+    
+    - name: Download analysis reports
+      uses: actions/download-artifact@v3
+      with:
+        path: reports/
+    
+    - name: Trigger MLOps Workflow
+      id: mlops-workflow
+      run: |
+        cd agents
+        python -c "
+        import json
+        import os
+        from integrations.mlops_integration import MLOpsAgentIntegration
+        
+        # Initialize MLOps integration
+        integration = MLOpsAgentIntegration('../mlops/config.yaml')
+        
+        # Collect all analysis results
+        context = {
+            'github_event': '${{ github.event_name }}',
+            'branch': '${{ github.ref_name }}',
+            'commit_sha': '${{ github.sha }}',
+            'pr_number': '${{ github.event.number }}' if '${{ github.event_name }}' == 'pull_request' else None
+        }
+        
+        # Add analysis results if available
+        reports_dir = '../reports'
+        if os.path.exists(reports_dir):
+            for report_type in ['security-analysis-report', 'performance-analysis-report', 'architecture-analysis-report']:
+                report_path = os.path.join(reports_dir, report_type)
+                if os.path.exists(report_path):
+                    for file in os.listdir(report_path):
+                        if file.endswith('.json'):
+                            with open(os.path.join(report_path, file), 'r') as f:
+                                context[report_type.replace('-report', '_results')] = json.load(f)
+        
+        # Trigger appropriate workflow based on context
+        if context.get('pr_number'):
+            # PR workflow
+            result = integration.trigger_agent_workflow('code_review_to_deployment', context)
+        else:
+            # Main branch workflow
+            result = integration.trigger_agent_workflow('architecture_optimization', context)
+        
+        print(f'MLOps workflow result: {result}')
+        
+        # Save result for next steps
+        with open('../mlops-result.json', 'w') as f:
+            json.dump(result, f, indent=2)
+        "
+    
+    - name: Update deployment status
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        if [ -f "mlops-result.json" ]; then
+          DEPLOYMENT_STATUS=$(jq -r '.status' mlops-result.json)
+          DEPLOYMENT_URL=$(jq -r '.results.staging_deployment.url // ""' mlops-result.json)
+          
+          if [ "$DEPLOYMENT_STATUS" = "success" ] && [ -n "$DEPLOYMENT_URL" ]; then
+            echo "✅ Deployment successful: $DEPLOYMENT_URL"
+            
+            # Create deployment status
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/deployments" \
+              -d "{
+                \"ref\": \"${{ github.sha }}\",
+                \"environment\": \"staging\",
+                \"description\": \"Automated deployment via Veteran Developer Agent\",
+                \"auto_merge\": false
+              }"
+          fi
+        fi
+    
+    - name: Upload MLOps result
+      uses: actions/upload-artifact@v3
+      with:
+        name: mlops-integration-result
+        path: mlops-result.json
+
+  # Job 6: Summary and Notifications
+  summary:
+    name: Workflow Summary
+    runs-on: ubuntu-latest
+    needs: [setup-validation, security-analysis, performance-analysis, architecture-analysis, mlops-integration]
+    if: always()
+    
+    steps:
+    - name: Download all reports
+      uses: actions/download-artifact@v3
+      with:
+        path: reports/
+    
+    - name: Generate workflow summary
+      run: |
+        echo "# 🤖 Veteran Developer Agent Workflow Summary" > summary.md
+        echo "" >> summary.md
+        echo "**Workflow:** ${{ github.workflow }}" >> summary.md
+        echo "**Trigger:** ${{ github.event_name }}" >> summary.md
+        echo "**Branch:** ${{ github.ref_name }}" >> summary.md
+        echo "**Commit:** ${{ github.sha }}" >> summary.md
+        echo "**Timestamp:** $(date -u)" >> summary.md
+        echo "" >> summary.md
+        
+        echo "## 📊 Analysis Results" >> summary.md
+        echo "" >> summary.md
+        
+        # Security Analysis
+        if [ "${{ needs.security-analysis.result }}" = "success" ]; then
+          echo "✅ **Security Analysis:** Passed" >> summary.md
+        elif [ "${{ needs.security-analysis.result }}" = "failure" ]; then
+          echo "❌ **Security Analysis:** Failed" >> summary.md
+        else
+          echo "⏭️ **Security Analysis:** Skipped" >> summary.md
+        fi
+        
+        # Performance Analysis
+        if [ "${{ needs.performance-analysis.result }}" = "success" ]; then
+          echo "✅ **Performance Analysis:** Passed" >> summary.md
+        elif [ "${{ needs.performance-analysis.result }}" = "failure" ]; then
+          echo "❌ **Performance Analysis:** Failed" >> summary.md
+        else
+          echo "⏭️ **Performance Analysis:** Skipped" >> summary.md
+        fi
+        
+        # Architecture Analysis
+        if [ "${{ needs.architecture-analysis.result }}" = "success" ]; then
+          echo "✅ **Architecture Analysis:** Passed" >> summary.md
+        elif [ "${{ needs.architecture-analysis.result }}" = "failure" ]; then
+          echo "❌ **Architecture Analysis:** Failed" >> summary.md
+        else
+          echo "⏭️ **Architecture Analysis:** Skipped" >> summary.md
+        fi
+        
+        # MLOps Integration
+        if [ "${{ needs.mlops-integration.result }}" = "success" ]; then
+          echo "✅ **MLOps Integration:** Passed" >> summary.md
+        elif [ "${{ needs.mlops-integration.result }}" = "failure" ]; then
+          echo "❌ **MLOps Integration:** Failed" >> summary.md
+        else
+          echo "⏭️ **MLOps Integration:** Skipped" >> summary.md
+        fi
+        
+        echo "" >> summary.md
+        echo "## 📁 Generated Reports" >> summary.md
+        echo "" >> summary.md
+        
+        if [ -d "reports" ]; then
+          find reports -name "*.json" | while read report; do
+            echo "- $(basename "$report")" >> summary.md
+          done
+        fi
+        
+        cat summary.md
+    
+    - name: Upload workflow summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: workflow-summary
+        path: summary.md
+    
+    - name: Notify on workflow completion
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🎉 Veteran Developer Agent workflow completed for main branch"
+        echo "Check the artifacts for detailed analysis reports"

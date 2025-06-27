@@ -1,0 +1,181 @@
+{
+  "id": "rse-fetch-bot-v1",
+  "name": "RSE Fetch Specialist",
+  "description": "Handles authenticated retrieval of RSE news items through the AI-News news API endpoints.",
+  "version": "1.0.0",
+  "capabilities": [
+    "API authentication and rate-limit handling",
+    "RSS/XML & JSON feed parsing",
+    "Error retry logic",
+    "Logging and metrics for fetch operations"
+  ],
+  "tools": [
+    "news_api",
+    "http_client"
+  ],
+  "configuration": {
+    "base_url": "http://localhost:3000/api",
+    "production_url": "https://ai-news-dashboard.com/api",
+    "rate_limit_delay": 1.0,
+    "max_retries": 3,
+    "timeout": 30,
+    "cache_ttl": 3600,
+    "max_pages_per_source": 5,
+    "batch_size": 50
+  },
+  "authentication": {
+    "method": "api_key",
+    "header_name": "X-API-Key",
+    "bearer_auth": true,
+    "environment_variables": [
+      "NEWS_API_KEY",
+      "NEXT_PUBLIC_NEWS_API_KEY",
+      "API_KEY"
+    ]
+  },
+  "rse_sources": {
+    "api_endpoints": {
+      "rse_news": {
+        "endpoint": "/news",
+        "method": "GET",
+        "params": {
+          "category": "research-software-engineering",
+          "limit": 50
+        }
+      },
+      "github_rse": {
+        "endpoint": "/news",
+        "method": "GET",
+        "params": {
+          "tag": "research-software",
+          "source": "github",
+          "limit": 30
+        }
+      },
+      "academic_research": {
+        "endpoint": "/news",
+        "method": "GET",
+        "params": {
+          "category": "science",
+          "tag": "software-engineering",
+          "limit": 25
+        }
+      }
+    },
+    "rss_feeds": {
+      "software_sustainability_institute": {
+        "url": "https://www.software.ac.uk/feed",
+        "category": "research-software-engineering",
+        "priority": "high"
+      },
+      "urssi": {
+        "url": "https://urssi.us/feed/",
+        "category": "research-software-engineering",
+        "priority": "high"
+      },
+      "rse_uk": {
+        "url": "https://rse.ac.uk/feed/",
+        "category": "research-software-engineering",
+        "priority": "high"
+      },
+      "society_rse": {
+        "url": "https://society-rse.org/feed/",
+        "category": "research-software-engineering",
+        "priority": "medium"
+      },
+      "better_scientific_software": {
+        "url": "https://bssw.io/feed.xml",
+        "category": "scientific-software",
+        "priority": "medium"
+      },
+      "research_computing": {
+        "url": "https://www.hpcwire.com/feed/",
+        "category": "high-performance-computing",
+        "priority": "low"
+      }
+    }
+  },
+  "filtering": {
+    "keywords": {
+      "include": [
+        "research software engineering",
+        "rse",
+        "scientific software",
+        "computational research",
+        "research computing",
+        "software sustainability",
+        "reproducible research",
+        "open science",
+        "fair data",
+        "software citation",
+        "research data management"
+      ],
+      "exclude": [
+        "spam",
+        "advertisement",
+        "promotional"
+      ]
+    },
+    "content_types": [
+      "article",
+      "blog_post",
+      "news",
+      "announcement",
+      "research_paper",
+      "conference",
+      "workshop"
+    ],
+    "min_content_length": 100,
+    "max_age_days": 30
+  },
+  "output": {
+    "format": "json",
+    "include_metadata": true,
+    "include_metrics": true,
+    "deduplicate": true,
+    "sort_by": "published_at",
+    "sort_order": "desc"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "rse_fetch_specialist.log",
+    "max_size_mb": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "monitoring": {
+    "health_check_interval": 300,
+    "metrics_retention_days": 7,
+    "alert_thresholds": {
+      "success_rate_min": 80.0,
+      "response_time_max": 10.0,
+      "error_rate_max": 20.0
+    }
+  },
+  "prompt_template": {
+    "system": "Let's think step by step:\n1. Load NEWS_API_KEY from environment.\n2. Query RSE feed endpoints under `/api/news`.\n3. Handle pagination, rate limits, and retries.\n4. Store raw responses for downstream tasks.\n5. Validate HTTP status codes and schema.",
+    "user": "{{user_input}}"
+  },
+  "examples": {
+    "basic_fetch": {
+      "command": "python rse_fetch_specialist.py",
+      "description": "Fetch all RSE content from configured sources"
+    },
+    "health_check": {
+      "command": "python rse_fetch_specialist.py --health-check",
+      "description": "Check system health and connectivity"
+    },
+    "with_output": {
+      "command": "python rse_fetch_specialist.py --output rse_news.json",
+      "description": "Fetch content and save to file"
+    },
+    "verbose_mode": {
+      "command": "python rse_fetch_specialist.py --verbose",
+      "description": "Run with detailed logging"
+    },
+    "custom_config": {
+      "command": "python rse_fetch_specialist.py --config custom_config.json",
+      "description": "Use custom configuration file"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "task": "trend_forecasting",
+  "status": "error",
+  "error": "PredictionRequest.__init__() got an unexpected keyword argument 'include_confidence'",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:15:04.625921",
+    "end_time": "2025-06-27T08:15:12.008560",
+    "total_execution_time": 7.382639,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "trend_forecasting",
+      "horizon": "1h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

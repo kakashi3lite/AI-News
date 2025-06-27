@@ -1,0 +1,115 @@
+# RSE Scheduler Orchestrator Systemd Service
+# Place this file in /etc/systemd/system/ and enable with:
+# sudo systemctl enable rse-scheduler.service
+# sudo systemctl start rse-scheduler.service
+
+[Unit]
+Description=RSE Scheduler Orchestrator - Cron-like job scheduling for RSE news updates
+Documentation=https://github.com/your-org/ai-news-dashboard/tree/main/scheduler
+After=network.target network-online.target
+Wants=network-online.target
+Requires=network.target
+
+# Dependencies (optional)
+# After=docker.service
+# Requires=docker.service
+# After=redis.service
+# Wants=redis.service
+
+[Service]
+# Service type
+Type=simple
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# User and group
+User=rse-scheduler
+Group=rse-scheduler
+
+# Working directory
+WorkingDirectory=/opt/rse-scheduler
+
+# Environment
+Environment=NODE_ENV=production
+Environment=LOG_LEVEL=info
+Environment=PORT=9090
+EnvironmentFile=-/opt/rse-scheduler/.env
+
+# Execution
+ExecStart=/usr/bin/node index.js
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+
+# Process management
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=60
+TimeoutStopSec=30
+TimeoutReloadSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/rse-scheduler/logs
+ReadWritePaths=/opt/rse-scheduler/backups
+ReadOnlyPaths=/opt/rse-scheduler
+
+# Network security
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=10.0.0.0/8
+IPAddressAllow=172.16.0.0/12
+IPAddressAllow=192.168.0.0/16
+
+# System call filtering
+SystemCallFilter=@system-service
+SystemCallFilter=~@debug @mount @cpu-emulation @obsolete @privileged @reboot @swap
+SystemCallErrorNumber=EPERM
+
+# Capabilities
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Memory and CPU limits
+MemoryAccounting=true
+MemoryMax=2G
+MemoryHigh=1.5G
+CPUAccounting=true
+CPUQuota=200%
+
+# I/O limits
+IOAccounting=true
+IOWeight=100
+
+# File descriptor limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rse-scheduler
+SyslogFacility=daemon
+SyslogLevel=info
+
+# Watchdog
+WatchdogSec=30
+NotifyAccess=main
+
+# OOM handling
+OOMPolicy=stop
+OOMScoreAdjust=100
+
+[Install]
+WantedBy=multi-user.target
+Alias=rse-scheduler.service
+
+# Additional service dependencies (uncomment as needed)
+# WantedBy=graphical.target
+# RequiredBy=nginx.service
+# PartOf=rse-stack.target

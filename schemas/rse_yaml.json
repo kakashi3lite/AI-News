@@ -1,0 +1,733 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-news-dashboard.com/schemas/rse_yaml.json",
+  "title": "RSE YAML Content Schema",
+  "description": "Schema for validating RSE content in YAML format for structured data and configuration",
+  "type": "object",
+  "properties": {
+    "rse_content": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^rse_[0-9]{8}_[a-z_]+_[a-f0-9]{8}$",
+              "description": "Unique identifier for the RSE content"
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "Semantic version of the content"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp when content was created"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp when content was last updated"
+            },
+            "schema_version": {
+              "type": "string",
+              "enum": ["1.0.0"],
+              "description": "Version of this schema used for validation"
+            },
+            "format": {
+              "type": "string",
+              "enum": ["yaml"],
+              "default": "yaml",
+              "description": "Content format identifier"
+            }
+          },
+          "required": ["id", "version", "created_at", "schema_version", "format"],
+          "additionalProperties": false
+        },
+        "header": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 200,
+              "description": "Title of the RSE content"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 1000,
+              "description": "Brief summary of the content"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 50,
+              "maxLength": 2000,
+              "description": "Detailed description of the content"
+            },
+            "domain": {
+              "type": "string",
+              "enum": [
+                "Machine Learning",
+                "Data Science",
+                "Software Engineering",
+                "Research Computing",
+                "High Performance Computing",
+                "Scientific Software",
+                "Digital Humanities",
+                "Artificial Intelligence",
+                "Natural Language Processing",
+                "Computer Vision",
+                "Bioinformatics",
+                "Computational Physics",
+                "Quantum Computing",
+                "Cybersecurity",
+                "DevOps",
+                "Cloud Computing",
+                "Other"
+              ],
+              "description": "Primary domain or field of the content"
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 50
+              },
+              "minItems": 1,
+              "maxItems": 15,
+              "uniqueItems": true,
+              "description": "Keywords associated with the content"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 30
+              },
+              "uniqueItems": true,
+              "description": "Tags for categorization and discovery"
+            }
+          },
+          "required": ["title", "summary", "domain", "keywords"],
+          "additionalProperties": false
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100,
+              "description": "Author's full name"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Author's email address"
+            },
+            "affiliation": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Author's institutional affiliation"
+            },
+            "orcid": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[0-9X]$",
+              "description": "Author's ORCID identifier"
+            },
+            "github": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9-]){0,38}$",
+              "description": "Author's GitHub username"
+            },
+            "website": {
+              "type": "string",
+              "format": "uri",
+              "description": "Author's personal or professional website"
+            },
+            "social": {
+              "type": "object",
+              "properties": {
+                "twitter": {
+                  "type": "string",
+                  "pattern": "^@?[a-zA-Z0-9_]{1,15}$"
+                },
+                "linkedin": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "mastodon": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        "content": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "research_paper",
+                "tutorial",
+                "tool_review",
+                "case_study",
+                "best_practices",
+                "news",
+                "announcement",
+                "dataset",
+                "software_package",
+                "workflow",
+                "methodology",
+                "other"
+              ],
+              "description": "Type of content"
+            },
+            "format": {
+              "type": "string",
+              "enum": ["structured", "narrative", "technical", "mixed"],
+              "default": "structured",
+              "description": "Content format style"
+            },
+            "language": {
+              "type": "string",
+              "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+              "default": "en",
+              "description": "Language code (ISO 639-1)"
+            },
+            "difficulty_level": {
+              "type": "string",
+              "enum": ["beginner", "intermediate", "advanced", "expert"],
+              "description": "Difficulty level of the content"
+            },
+            "estimated_time": {
+              "type": "object",
+              "properties": {
+                "reading_minutes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 120
+                },
+                "implementation_hours": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 100
+                },
+                "setup_minutes": {
+                  "type": "integer",
+                  "minimum": 5,
+                  "maximum": 180
+                }
+              },
+              "description": "Time estimates for different activities"
+            },
+            "sections": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 10
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["introduction", "methodology", "results", "discussion", "conclusion", "code", "data", "references", "appendix", "other"]
+                  },
+                  "order": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": ["title", "content", "type"],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "description": "Structured content sections"
+            }
+          },
+          "required": ["type", "sections"],
+          "additionalProperties": false
+        },
+        "technical": {
+          "type": "object",
+          "properties": {
+            "technologies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)*([a-zA-Z0-9\\-\\+]+)?$"
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": ["framework", "library", "tool", "platform", "language", "database", "service", "other"]
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": ["name", "category"],
+                "additionalProperties": false
+              },
+              "uniqueItems": true,
+              "description": "Technologies used or discussed"
+            },
+            "programming_languages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": ["Python", "R", "JavaScript", "Java", "C++", "C", "Go", "Rust", "Julia", "MATLAB", "Scala", "Ruby", "PHP", "Swift", "Kotlin", "TypeScript", "Fortran", "Perl", "Shell", "SQL", "Other"]
+                  },
+                  "version": {
+                    "type": "string"
+                  },
+                  "primary": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "usage": {
+                    "type": "string",
+                    "enum": ["implementation", "analysis", "visualization", "testing", "deployment", "other"]
+                  }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+              },
+              "uniqueItems": true,
+              "description": "Programming languages involved"
+            },
+            "requirements": {
+              "type": "object",
+              "properties": {
+                "system": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "System requirements"
+                },
+                "software": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Software dependencies"
+                },
+                "hardware": {
+                  "type": "object",
+                  "properties": {
+                    "min_ram_gb": {
+                      "type": "number",
+                      "minimum": 0.5
+                    },
+                    "min_storage_gb": {
+                      "type": "number",
+                      "minimum": 0.1
+                    },
+                    "gpu_required": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "cpu_cores": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "links": {
+              "type": "object",
+              "properties": {
+                "repository": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Main code repository URL"
+                },
+                "documentation": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Documentation URL"
+                },
+                "demo": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Demo or live example URL"
+                },
+                "paper": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Associated research paper URL"
+                },
+                "dataset": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Dataset URL"
+                },
+                "related": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 200
+                      }
+                    },
+                    "required": ["url", "title"],
+                    "additionalProperties": false
+                  },
+                  "description": "Related content links"
+                }
+              },
+              "additionalProperties": false
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["code", "data", "config", "documentation", "test", "example", "other"]
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "checksum": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{32,128}$"
+                  }
+                },
+                "required": ["name", "path", "type"],
+                "additionalProperties": false
+              },
+              "description": "Associated files and their metadata"
+            }
+          },
+          "additionalProperties": false
+        },
+        "quality": {
+          "type": "object",
+          "properties": {
+            "peer_reviewed": {
+              "type": "boolean",
+              "description": "Whether the content has been peer reviewed"
+            },
+            "reproducible": {
+              "type": "boolean",
+              "description": "Whether the content includes reproducible elements"
+            },
+            "tested": {
+              "type": "boolean",
+              "description": "Whether the content has been tested"
+            },
+            "documented": {
+              "type": "boolean",
+              "description": "Whether the content is well documented"
+            },
+            "code_available": {
+              "type": "boolean",
+              "description": "Whether associated code is available"
+            },
+            "data_available": {
+              "type": "boolean",
+              "description": "Whether associated data is available"
+            },
+            "confidence_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Confidence score for content quality (0-1)"
+            },
+            "validation_status": {
+              "type": "string",
+              "enum": ["pending", "validated", "rejected", "needs_review"],
+              "default": "pending",
+              "description": "Validation status of the content"
+            },
+            "review_comments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "reviewer": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": ["reviewer", "comment", "date"],
+                "additionalProperties": false
+              },
+              "description": "Review comments and feedback"
+            }
+          },
+          "additionalProperties": false
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Original source URL"
+            },
+            "doi": {
+              "type": "string",
+              "pattern": "^10\\.\\d+/.+$",
+              "description": "Digital Object Identifier"
+            },
+            "publication": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Publication name or venue"
+            },
+            "publication_date": {
+              "type": "string",
+              "format": "date",
+              "description": "Original publication date"
+            },
+            "license": {
+              "type": "string",
+              "enum": ["CC0", "CC-BY", "CC-BY-SA", "CC-BY-NC", "CC-BY-NC-SA", "MIT", "Apache-2.0", "GPL-3.0", "BSD-3-Clause", "Other", "Unknown"],
+              "description": "Content license"
+            },
+            "citation": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Formatted citation string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "views": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of views"
+            },
+            "downloads": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of downloads"
+            },
+            "citations": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of citations"
+            },
+            "stars": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of stars (if applicable)"
+            },
+            "forks": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of forks (if applicable)"
+            },
+            "last_updated": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Last metrics update timestamp"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["metadata", "header", "author", "content"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["rse_content"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "rse_content": {
+        "metadata": {
+          "id": "rse_20241201_machine_learning_a1b2c3d4",
+          "version": "1.0.0",
+          "created_at": "2024-12-01T10:00:00Z",
+          "schema_version": "1.0.0",
+          "format": "yaml"
+        },
+        "header": {
+          "title": "Advanced Neural Network Architectures for Scientific Computing",
+          "summary": "This comprehensive guide explores cutting-edge neural network architectures specifically designed for scientific computing applications.",
+          "description": "A detailed exploration of neural network architectures optimized for scientific computing, including physics-informed neural networks, graph neural networks for molecular dynamics, and hybrid approaches combining traditional numerical methods with deep learning.",
+          "domain": "Machine Learning",
+          "keywords": ["neural networks", "scientific computing", "physics simulation", "molecular dynamics", "deep learning"],
+          "tags": ["tutorial", "advanced", "research", "implementation"]
+        },
+        "author": {
+          "name": "Dr. Sarah Johnson",
+          "email": "sarah.johnson@university.edu",
+          "affiliation": "Department of Computer Science, University of Technology",
+          "orcid": "0000-0002-1234-5678",
+          "github": "sarahjohnson",
+          "website": "https://sarahjohnson.research.edu"
+        },
+        "content": {
+          "type": "tutorial",
+          "format": "technical",
+          "difficulty_level": "advanced",
+          "estimated_time": {
+            "reading_minutes": 45,
+            "implementation_hours": 8,
+            "setup_minutes": 30
+          },
+          "sections": [
+            {
+              "title": "Introduction to Scientific Neural Networks",
+              "content": "Scientific computing has traditionally relied on numerical methods...",
+              "type": "introduction",
+              "order": 1
+            },
+            {
+              "title": "Implementation Guide",
+              "content": "Here's how to implement these architectures using modern frameworks...",
+              "type": "code",
+              "order": 2
+            }
+          ]
+        },
+        "technical": {
+          "technologies": [
+            {
+              "name": "TensorFlow",
+              "version": "2.13.0",
+              "category": "framework",
+              "required": true,
+              "url": "https://tensorflow.org"
+            },
+            {
+              "name": "PyTorch",
+              "version": "2.0.0",
+              "category": "framework",
+              "required": false,
+              "url": "https://pytorch.org"
+            }
+          ],
+          "programming_languages": [
+            {
+              "name": "Python",
+              "version": "3.9+",
+              "primary": true,
+              "usage": "implementation"
+            }
+          ],
+          "requirements": {
+            "system": ["Linux", "macOS", "Windows"],
+            "software": ["CUDA 11.8+", "cuDNN 8.6+"],
+            "hardware": {
+              "min_ram_gb": 16,
+              "min_storage_gb": 10,
+              "gpu_required": true,
+              "cpu_cores": 4
+            }
+          }
+        },
+        "resources": {
+          "links": {
+            "repository": "https://github.com/example/scientific-neural-networks",
+            "documentation": "https://sci-nn.readthedocs.io",
+            "demo": "https://colab.research.google.com/drive/example",
+            "paper": "https://arxiv.org/abs/2024.12345"
+          }
+        },
+        "quality": {
+          "peer_reviewed": true,
+          "reproducible": true,
+          "tested": true,
+          "documented": true,
+          "code_available": true,
+          "confidence_score": 0.95,
+          "validation_status": "validated"
+        },
+        "source": {
+          "url": "https://arxiv.org/abs/2024.12345",
+          "doi": "10.1000/182",
+          "publication": "Journal of Scientific Computing",
+          "publication_date": "2024-11-15",
+          "license": "CC-BY"
+        }
+      }
+    }
+  ]
+}

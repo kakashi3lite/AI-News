@@ -1,0 +1,19 @@
+{
+  "task": "trend_forecasting",
+  "status": "error",
+  "error": "'PredictionResult' object has no attribute 'predictions'",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:15:58.805552",
+    "end_time": "2025-06-27T08:16:14.448621",
+    "total_execution_time": 15.643069,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "trend_forecasting",
+      "horizon": "1h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

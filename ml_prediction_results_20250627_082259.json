@@ -1,0 +1,22 @@
+{
+  "task": "sentiment_trends",
+  "status": "success",
+  "predicted_value": "negative",
+  "confidence_score": 0.63,
+  "model_used": "random_forest_sentiment",
+  "model_version": "v1.3.0",
+  "execution_metadata": {
+    "start_time": "2025-06-27T08:22:42.581852",
+    "end_time": "2025-06-27T08:22:59.091096",
+    "total_execution_time": 16.509244,
+    "cli_version": "1.0.0",
+    "arguments": {
+      "task": "sentiment_trends",
+      "horizon": "24h",
+      "model_version": "v1.0.0",
+      "output": null,
+      "config": null,
+      "verbose": false
+    }
+  }
+}

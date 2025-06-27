@@ -37,6 +37,12 @@ import hashlib
 import re
 from urllib.parse import urlparse
 
+# Import stream error handler
+from .stream_error_handler import (
+    stream_error_handler, StreamErrorType, RetryConfig, CircuitBreakerConfig,
+    with_stream_error_handling, register_stream_circuit_breaker, register_stream_fallback
+)
+
 import numpy as np
 import pandas as pd
 import torch
@@ -190,6 +196,9 @@ class NewsPreprocessor:
         # Geocoder
         self.geocoder = Nominatim(user_agent="news_pipeline")
         
+        # Register error handling
+        self._register_error_handling()
+        
         logger.info("News preprocessor initialized")
     
     def load_nlp_models(self):
@@ -258,148 +267,232 @@ class NewsPreprocessor:
         except:
             return 'en'  # Default to English
     
+    @with_stream_error_handling(
+        operation="extract_entities",
+        component="news_preprocessor",
+        retry_config=RetryConfig(max_retries=2, retryable_errors=[StreamErrorType.MODEL_INFERENCE]),
+        fallback="entity_extraction_fallback"
+    )
     async def extract_entities(self, event: NewsEvent):
         """Extract named entities from news content."""
-        try:
-            # Use transformer-based NER
-            text = f"{event.title} {event.content}"
-            entities = self.ner_pipeline(text)
-            
-            # Process entities
-            processed_entities = []
-            for entity in entities:
-                processed_entities.append({
-                    'text': entity['word'],
-                    'label': entity['entity_group'],
-                    'confidence': entity['score'],
-                    'start': entity.get('start', 0),
-                    'end': entity.get('end', 0)
-                })
-            
-            event.entities = processed_entities
-            
-        except Exception as e:
-            logger.error(f"Entity extraction failed: {e}")
-            event.entities = []
+        # Use transformer-based NER
+        text = f"{event.title} {event.content}"
+        entities = self.ner_pipeline(text)
+        
+        # Process entities
+        processed_entities = []
+        for entity in entities:
+            processed_entities.append({
+                'text': entity['word'],
+                'label': entity['entity_group'],
+                'confidence': entity['score'],
+                'start': entity.get('start', 0),
+                'end': entity.get('end', 0)
+            })
+        
+        event.entities = processed_entities
+        return event
     
+    @with_stream_error_handling(
+        operation="analyze_sentiment",
+        component="news_preprocessor",
+        retry_config=RetryConfig(max_retries=2, retryable_errors=[StreamErrorType.MODEL_INFERENCE]),
+        fallback="sentiment_analysis_fallback"
+    )
     async def analyze_sentiment(self, event: NewsEvent):
         """Analyze sentiment of news content."""
-        try:
-            text = f"{event.title} {event.content}"
-            
-            # Use transformer-based sentiment analysis
-            result = self.sentiment_analyzer(text[:512])  # Limit text length
-            
-            # Convert to numerical score
-            if result[0]['label'] == 'POSITIVE':
-                event.sentiment = result[0]['score']
-            elif result[0]['label'] == 'NEGATIVE':
-                event.sentiment = -result[0]['score']
-            else:  # NEUTRAL
-                event.sentiment = 0.0
-            
-            # Record sentiment distribution
-            sentiment_label = 'positive' if event.sentiment > 0.1 else 'negative' if event.sentiment < -0.1 else 'neutral'
-            SENTIMENT_DISTRIBUTION.labels(sentiment=sentiment_label).inc()
-            
-        except Exception as e:
-            logger.error(f"Sentiment analysis failed: {e}")
+        text = f"{event.title} {event.content}"
+        
+        # Use transformer-based sentiment analysis
+        result = self.sentiment_analyzer(text[:512])  # Limit text length
+        
+        # Convert to numerical score
+        if result[0]['label'] == 'POSITIVE':
+            event.sentiment = result[0]['score']
+        elif result[0]['label'] == 'NEGATIVE':
+            event.sentiment = -result[0]['score']
+        else:  # NEUTRAL
             event.sentiment = 0.0
+        
+        # Record sentiment distribution
+        sentiment_label = 'positive' if event.sentiment > 0.1 else 'negative' if event.sentiment < -0.1 else 'neutral'
+        SENTIMENT_DISTRIBUTION.labels(sentiment=sentiment_label).inc()
+        
+        return event
     
+    @with_stream_error_handling(
+        operation="extract_keywords",
+        component="news_preprocessor",
+        retry_config=RetryConfig(max_retries=2, retryable_errors=[StreamErrorType.MODEL_INFERENCE]),
+        fallback="keyword_extraction_fallback"
+    )
     async def extract_keywords(self, event: NewsEvent):
         """Extract keywords from news content."""
-        try:
-            # Use spaCy for keyword extraction
-            nlp = self.nlp_models.get(event.language, self.nlp_models['en'])
-            doc = nlp(event.content)
-            
-            # Extract keywords based on POS tags and entities
-            keywords = set()
-            
-            # Add named entities
-            for ent in doc.ents:
-                if ent.label_ in ['PERSON', 'ORG', 'GPE', 'EVENT']:
-                    keywords.add(ent.text.lower())
-            
-            # Add important nouns and adjectives
-            for token in doc:
-                if (token.pos_ in ['NOUN', 'PROPN', 'ADJ'] and 
-                    not token.is_stop and 
-                    not token.is_punct and 
-                    len(token.text) > 2):
-                    keywords.add(token.lemma_.lower())
-            
-            event.keywords = list(keywords)[:20]  # Limit to top 20 keywords
-            
-        except Exception as e:
-            logger.error(f"Keyword extraction failed: {e}")
-            event.keywords = []
+        # Use spaCy for keyword extraction
+        nlp = self.nlp_models.get(event.language, self.nlp_models['en'])
+        doc = nlp(event.content)
+        
+        # Extract keywords based on POS tags and entities
+        keywords = set()
+        
+        # Add named entities
+        for ent in doc.ents:
+            if ent.label_ in ['PERSON', 'ORG', 'GPE', 'EVENT']:
+                keywords.add(ent.text.lower())
+        
+        # Add important nouns and adjectives
+        for token in doc:
+            if (token.pos_ in ['NOUN', 'PROPN', 'ADJ'] and 
+                not token.is_stop and 
+                not token.is_punct and 
+                len(token.text) > 2):
+                keywords.add(token.lemma_.lower())
+        
+        event.keywords = list(keywords)[:20]  # Limit to top 20 keywords
+        
+        return event
     
+    @with_stream_error_handling(
+        operation="generate_embedding",
+        component="news_preprocessor",
+        retry_config=RetryConfig(max_retries=2, retryable_errors=[StreamErrorType.MODEL_INFERENCE]),
+        fallback="embedding_generation_fallback"
+    )
     async def generate_embedding(self, event: NewsEvent):
         """Generate semantic embedding for news content."""
-        try:
-            text = f"{event.title} {event.content}"
-            embedding = self.embedding_model.encode(text[:512])
-            event.embedding = embedding.tolist()
-            
-        except Exception as e:
-            logger.error(f"Embedding generation failed: {e}")
-            event.embedding = []
+        text = f"{event.title} {event.content}"
+        embedding = self.embedding_model.encode(text[:512])
+        event.embedding = embedding.tolist()
+        
+        return event
     
+    @with_stream_error_handling(
+        operation="extract_location",
+        component="news_preprocessor",
+        retry_config=RetryConfig(max_retries=2, retryable_errors=[StreamErrorType.EXTERNAL_API]),
+        fallback="location_extraction_fallback"
+    )
     async def extract_location(self, event: NewsEvent):
         """Extract geographical location from news content."""
-        try:
-            # Look for location entities
-            location_entities = []
-            if event.entities:
-                location_entities = [
-                    ent['text'] for ent in event.entities 
-                    if ent['label'] in ['LOC', 'GPE']
-                ]
+        # Look for location entities
+        location_entities = []
+        if event.entities:
+            location_entities = [
+                ent['text'] for ent in event.entities 
+                if ent['label'] in ['LOC', 'GPE']
+            ]
+        
+        # Try to geocode the first location found
+        if location_entities:
+            location_name = location_entities[0]
+            location = self.geocoder.geocode(location_name)
             
-            # Try to geocode the first location found
-            if location_entities:
-                location_name = location_entities[0]
-                location = self.geocoder.geocode(location_name)
-                
-                if location:
-                    event.location = (location.latitude, location.longitude)
-            
-        except Exception as e:
-            logger.error(f"Location extraction failed: {e}")
-            event.location = None
+            if location:
+                event.location = (location.latitude, location.longitude)
+        
+        return event
     
+    @with_stream_error_handling(
+        operation="classify_category",
+        component="news_preprocessor",
+        retry_config=RetryConfig(max_retries=1, retryable_errors=[StreamErrorType.PROCESSING]),
+        fallback="category_classification_fallback"
+    )
     async def classify_category(self, event: NewsEvent):
         """Classify news into categories."""
-        try:
-            # Simple keyword-based classification
-            text = f"{event.title} {event.content}".lower()
-            
-            categories = {
-                'politics': ['election', 'government', 'policy', 'politician', 'vote', 'congress', 'senate'],
-                'business': ['economy', 'market', 'stock', 'company', 'finance', 'trade', 'investment'],
-                'technology': ['tech', 'ai', 'software', 'computer', 'internet', 'digital', 'innovation'],
-                'health': ['health', 'medical', 'hospital', 'doctor', 'disease', 'treatment', 'vaccine'],
-                'sports': ['sport', 'game', 'team', 'player', 'match', 'championship', 'olympic'],
-                'entertainment': ['movie', 'music', 'celebrity', 'film', 'actor', 'entertainment', 'show']
-            }
-            
-            category_scores = {}
-            for category, keywords in categories.items():
-                score = sum(1 for keyword in keywords if keyword in text)
-                category_scores[category] = score
-            
-            # Assign category with highest score
-            if category_scores:
-                event.category = max(category_scores, key=category_scores.get)
-                if category_scores[event.category] == 0:
-                    event.category = 'general'
-            else:
+        # Simple keyword-based classification
+        text = f"{event.title} {event.content}".lower()
+        
+        categories = {
+            'politics': ['election', 'government', 'policy', 'politician', 'vote', 'congress', 'senate'],
+            'business': ['economy', 'market', 'stock', 'company', 'finance', 'trade', 'investment'],
+            'technology': ['tech', 'ai', 'software', 'computer', 'internet', 'digital', 'innovation'],
+            'health': ['health', 'medical', 'hospital', 'doctor', 'disease', 'treatment', 'vaccine'],
+            'sports': ['sport', 'game', 'team', 'player', 'match', 'championship', 'olympic'],
+            'entertainment': ['movie', 'music', 'celebrity', 'film', 'actor', 'entertainment', 'show']
+        }
+        
+        category_scores = {}
+        for category, keywords in categories.items():
+            score = sum(1 for keyword in keywords if keyword in text)
+            category_scores[category] = score
+        
+        # Assign category with highest score
+        if category_scores:
+            event.category = max(category_scores, key=category_scores.get)
+            if category_scores[event.category] == 0:
                 event.category = 'general'
-            
-        except Exception as e:
-            logger.error(f"Category classification failed: {e}")
+        else:
             event.category = 'general'
+        
+        return event
+
+    def _register_error_handling(self):
+        """Register fallback methods and circuit breaker configurations."""
+        # Register fallback methods
+        register_stream_fallback("entity_extraction_fallback", self.entity_extraction_fallback)
+        register_stream_fallback("sentiment_analysis_fallback", self.sentiment_analysis_fallback)
+        register_stream_fallback("keyword_extraction_fallback", self.keyword_extraction_fallback)
+        register_stream_fallback("embedding_generation_fallback", self.embedding_generation_fallback)
+        register_stream_fallback("location_extraction_fallback", self.location_extraction_fallback)
+        register_stream_fallback("category_classification_fallback", self.category_classification_fallback)
+        
+        # Register circuit breakers for external services
+        register_stream_circuit_breaker(
+            "entity_extraction",
+            CircuitBreakerConfig(failure_threshold=5, recovery_timeout=60, half_open_max_calls=3)
+        )
+        register_stream_circuit_breaker(
+            "sentiment_analysis", 
+            CircuitBreakerConfig(failure_threshold=5, recovery_timeout=60, half_open_max_calls=3)
+        )
+        register_stream_circuit_breaker(
+            "embedding_generation",
+            CircuitBreakerConfig(failure_threshold=3, recovery_timeout=120, half_open_max_calls=2)
+        )
+        register_stream_circuit_breaker(
+            "location_extraction",
+            CircuitBreakerConfig(failure_threshold=10, recovery_timeout=300, half_open_max_calls=5)
+        )
+
+    # Fallback methods for error handling
+    def entity_extraction_fallback(self, event: NewsEvent, error: Exception) -> NewsEvent:
+        """Fallback for entity extraction failures."""
+        logger.warning(f"Using entity extraction fallback due to: {error}")
+        event.entities = []
+        return event
+    
+    def sentiment_analysis_fallback(self, event: NewsEvent, error: Exception) -> NewsEvent:
+        """Fallback for sentiment analysis failures."""
+        logger.warning(f"Using sentiment analysis fallback due to: {error}")
+        event.sentiment = 0.0
+        return event
+    
+    def keyword_extraction_fallback(self, event: NewsEvent, error: Exception) -> NewsEvent:
+        """Fallback for keyword extraction failures."""
+        logger.warning(f"Using keyword extraction fallback due to: {error}")
+        # Simple fallback: extract words from title
+        words = event.title.lower().split()
+        event.keywords = [word for word in words if len(word) > 3][:10]
+        return event
+    
+    def embedding_generation_fallback(self, event: NewsEvent, error: Exception) -> NewsEvent:
+        """Fallback for embedding generation failures."""
+        logger.warning(f"Using embedding generation fallback due to: {error}")
+        event.embedding = []
+        return event
+    
+    def location_extraction_fallback(self, event: NewsEvent, error: Exception) -> NewsEvent:
+        """Fallback for location extraction failures."""
+        logger.warning(f"Using location extraction fallback due to: {error}")
+        event.location = None
+        return event
+    
+    def category_classification_fallback(self, event: NewsEvent, error: Exception) -> NewsEvent:
+        """Fallback for category classification failures."""
+        logger.warning(f"Using category classification fallback due to: {error}")
+        event.category = 'general'
+        return event
 
 class StreamProcessor:
     """Real-time stream processing engine."""
