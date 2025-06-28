@@ -4,9 +4,12 @@
 #
 # <footer>
 
-# --- COMMIT MESSAGE TEMPLATE ---
+# --- GIT SDE AGENT COMMIT MESSAGE TEMPLATE ---
 # Please follow the Conventional Commits specification:
 # https://www.conventionalcommits.org/
+#
+# This template is enhanced for Git SDE Agent workflows
+# User: kakashi3lite (swanandtanavade100@gmail.com)
 #
 # Format:
 # <type>(<scope>): <subject>
@@ -14,6 +17,12 @@
 # [optional body]
 # 
 # [optional footer(s)]
+#
+# Git SDE Agent will automatically:
+# - Validate commit message format
+# - Run code quality checks
+# - Generate test suggestions
+# - Update documentation links
 #
 # --- TYPE ---
 # Must be one of the following:
@@ -30,24 +39,36 @@
 # revert:   Reverts a previous commit
 #
 # --- SCOPE ---
-# Optional, but recommended. Examples:
-# search:   Arc-style search functionality
-# ai:       AI skill orchestrator and context features
-# social:   Social features (recommendations, sharing)
+# Optional, but recommended. AI News Dashboard specific scopes:
+# news:     News ingestion, processing, and display
+# ingest:   News data ingestion and parsing (ingest.js)
 # api:      API endpoints and backend services
-# ui:       User interface components
+# ui:       User interface components and dashboard
+# agents:   RSE agents and AI automation
+# mlops:    Machine learning operations and pipelines
+# search:   Search functionality and indexing
+# ai:       AI/ML features and model integration
 # auth:     Authentication and authorization
 # db:       Database related changes
 # config:   Configuration changes
 # deps:     Dependency updates
 # security: Security related changes
 # perf:     Performance improvements
-# a11y:     Accessibility improvements
-# i18n:     Internationalization
-# mobile:   Mobile-specific changes
-# desktop:  Desktop-specific changes
+# test:     Testing infrastructure and test cases
+# docs:     Documentation updates
+# ci:       CI/CD pipeline changes
+# git:      Git workflow and SDE Agent configuration
 # analytics: Analytics and tracking
 # monitoring: Monitoring and observability
+#
+# --- GIT SDE AGENT METADATA ---
+# The following will be automatically added by the Git SDE Agent:
+# Agent-Review: [automated|manual|hybrid]
+# Quality-Score: [0-100]
+# Security-Scan: [passed|failed|skipped]
+# Test-Coverage: [percentage]
+# Performance-Impact: [none|low|medium|high]
+# Breaking-Change: [true|false]
 # blockchain: Blockchain verification system
 # ml:       Machine learning components
 # cache:    Caching mechanisms

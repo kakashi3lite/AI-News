@@ -1,0 +1,198 @@
+# Git Configuration Template for AI News Dashboard
+# Git SDE Agent Project Configuration
+# User: kakashi3lite
+# Email: swanandtanavade100@gmail.com
+
+[user]
+    name = kakashi3lite
+    email = swanandtanavade100@gmail.com
+    signingkey = # Add your GPG key ID here if using signed commits
+
+[core]
+    editor = code --wait  # Use VS Code as default editor
+    autocrlf = true       # Windows line ending handling
+    safecrlf = warn       # Warn about mixed line endings
+    preloadindex = true   # Speed up operations
+    fscache = true        # File system cache for Windows
+    compression = 9       # Maximum compression
+    quotepath = false     # Handle Unicode filenames properly
+
+[init]
+    defaultBranch = main  # Use 'main' as default branch name
+
+[pull]
+    rebase = true         # Use rebase instead of merge for pulls
+
+[push]
+    default = simple      # Push only current branch
+    followTags = true     # Push tags with commits
+
+[fetch]
+    prune = true          # Remove deleted remote branches
+
+[merge]
+    tool = vscode         # Use VS Code for merge conflicts
+    conflictstyle = diff3 # Show common ancestor in conflicts
+
+[mergetool "vscode"]
+    cmd = code --wait $MERGED
+
+[diff]
+    tool = vscode         # Use VS Code for diffs
+    algorithm = histogram # Better diff algorithm
+
+[difftool "vscode"]
+    cmd = code --wait --diff $LOCAL $REMOTE
+
+[branch]
+    autosetupmerge = always
+    autosetuprebase = always
+
+[rebase]
+    autoStash = true      # Automatically stash/unstash when rebasing
+    autoSquash = true     # Automatically squash fixup commits
+
+[status]
+    showUntrackedFiles = all
+
+[log]
+    date = relative       # Show relative dates in log
+
+[color]
+    ui = auto             # Enable colors in terminal
+    branch = auto
+    diff = auto
+    status = auto
+
+[color "branch"]
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color "diff"]
+    meta = yellow bold
+    frag = magenta bold
+    old = red bold
+    new = green bold
+
+[color "status"]
+    added = yellow
+    changed = green
+    untracked = cyan
+
+# Git aliases for common operations
+[alias]
+    # Basic shortcuts
+    co = checkout
+    br = branch
+    ci = commit
+    st = status
+    unstage = reset HEAD --
+    last = log -1 HEAD
+    visual = !gitk
+
+    # Enhanced commands
+    lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+    lol = log --graph --decorate --pretty=oneline --abbrev-commit
+    lola = log --graph --decorate --pretty=oneline --abbrev-commit --all
+    ls = ls-files
+    ign = ls-files -o -i --exclude-standard
+
+    # Git SDE Agent specific aliases
+    sde-status = !echo "Git SDE Agent Status: Active" && git status
+    sde-branch = !git checkout -b "feature/$(date +%Y%m%d)-$(whoami)-"
+    sde-commit = !git add . && git commit -m
+    sde-push = !git push -u origin $(git branch --show-current)
+    sde-sync = !git checkout main && git pull origin main
+    sde-clean = !git branch --merged | grep -v "\*\|main\|develop" | xargs -n 1 git branch -d
+
+    # Advanced workflows
+    wip = !git add -A && git commit -m "WIP: work in progress"
+    unwip = !git log -n 1 | grep -q -c "WIP" && git reset HEAD~1
+    assume = update-index --assume-unchanged
+    unassume = update-index --no-assume-unchanged
+    assumed = !git ls-files -v | grep ^h | cut -c 3-
+    snapshot = !git stash save "snapshot: $(date)" && git stash apply "stash@{0}"
+    ours = "!f() { git co --ours $@ && git add $@; }; f"
+    theirs = "!f() { git co --theirs $@ && git add $@; }; f"
+
+    # Repository maintenance
+    cleanup = !git remote prune origin && git gc && git clean -df && git stash clear
+    contributors = shortlog --summary --numbered
+    filetrail = log --follow -p --
+    mergetrail = log --ancestry-path --merges
+
+# Credential management
+[credential]
+    helper = manager      # Use Windows Credential Manager
+
+# GPG signing (optional)
+[commit]
+    # gpgsign = true      # Uncomment to enable GPG signing
+
+[tag]
+    # gpgsign = true      # Uncomment to enable GPG signing for tags
+
+# URL shortcuts for common remotes
+[url "git@github.com:"]
+    insteadOf = gh:
+    pushInsteadOf = github:
+    pushInsteadOf = git://github.com/
+
+[url "git://github.com/"]
+    insteadOf = github:
+
+[url "git@gist.github.com:"]
+    insteadOf = gst:
+    pushInsteadOf = gist:
+    pushInsteadOf = git://gist.github.com/
+
+[url "git://gist.github.com/"]
+    insteadOf = gist:
+
+# Git LFS configuration
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
+
+# Security settings
+[transfer]
+    fsckobjects = true
+
+[fetch]
+    fsckobjects = true
+
+[receive]
+    fsckObjects = true
+
+# Performance optimizations
+[pack]
+    threads = 0           # Use all available CPU cores
+
+[index]
+    version = 4           # Use index version 4 for better performance
+
+# Git hooks configuration
+[hooks]
+    # These will be managed by the Git SDE Agent
+    pre-commit = true
+    pre-push = true
+    commit-msg = true
+
+# Project-specific settings for AI News Dashboard
+[includeIf "gitdir:*/ai-news-dashboard/"]
+    path = .gitconfig-ai-news
+
+# Additional configuration for AI News Dashboard
+# This section is automatically managed by Git SDE Agent
+[sde-agent]
+    enabled = true
+    version = 1.0.0
+    last-update = $(date -Iseconds)
+    features = branch-management,code-review,ci-cd-automation,test-generation
+    monitoring = true
+    audit-trail = true
+
+# End of Git SDE Agent Configuration

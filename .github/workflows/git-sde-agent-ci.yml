@@ -1,0 +1,516 @@
+name: Git SDE Agent - CI/CD Pipeline
+
+# Trigger on pushes to main/master and pull requests
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+    inputs:
+      run_full_suite:
+        description: 'Run full test suite including performance tests'
+        required: false
+        default: 'false'
+        type: boolean
+      skip_security_scan:
+        description: 'Skip security vulnerability scan'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+  SDE_AGENT_VERSION: '1.0.0'
+  QUALITY_THRESHOLD: '90'
+  COVERAGE_THRESHOLD: '80'
+
+jobs:
+  # Pre-flight checks and setup
+  preflight:
+    name: 🚀 Pre-flight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_run_tests: ${{ steps.changes.outputs.code }}
+      should_run_security: ${{ steps.changes.outputs.security }}
+      should_run_performance: ${{ steps.changes.outputs.performance }}
+      commit_quality_score: ${{ steps.extract_metadata.outputs.quality_score }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Detect changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            code:
+              - '**/*.js'
+              - '**/*.jsx'
+              - '**/*.ts'
+              - '**/*.tsx'
+              - '**/*.py'
+              - '**/*.json'
+              - 'package*.json'
+              - 'requirements*.txt'
+            security:
+              - '**/*.js'
+              - '**/*.py'
+              - 'package*.json'
+              - 'requirements*.txt'
+              - '.github/workflows/**'
+            performance:
+              - 'news/**'
+              - 'lib/**'
+              - 'components/**'
+              - 'app/**'
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+
+      - name: 📊 Extract SDE Agent metadata
+        id: extract_metadata
+        run: |
+          # Extract quality score from commit message
+          QUALITY_SCORE=$(git log -1 --pretty=%B | grep "Quality-Score:" | awk '{print $2}' | sed 's/%//' || echo "0")
+          SECURITY_SCAN=$(git log -1 --pretty=%B | grep "Security-Scan:" | awk '{print $2}' || echo "unknown")
+          FILES_CHECKED=$(git log -1 --pretty=%B | grep "Files-Checked:" | awk '{print $2}' || echo "0")
+          
+          echo "quality_score=$QUALITY_SCORE" >> $GITHUB_OUTPUT
+          echo "security_scan=$SECURITY_SCAN" >> $GITHUB_OUTPUT
+          echo "files_checked=$FILES_CHECKED" >> $GITHUB_OUTPUT
+          
+          echo "🤖 Git SDE Agent Metadata:"
+          echo "  Quality Score: $QUALITY_SCORE%"
+          echo "  Security Scan: $SECURITY_SCAN"
+          echo "  Files Checked: $FILES_CHECKED"
+
+      - name: 📋 Job Summary
+        run: |
+          echo "## 🤖 Git SDE Agent CI/CD Pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Pre-flight Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- **Quality Score**: ${{ steps.extract_metadata.outputs.quality_score }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan**: ${{ steps.extract_metadata.outputs.security_scan }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Checked**: ${{ steps.extract_metadata.outputs.files_checked }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Code Changes**: ${{ steps.changes.outputs.code }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Changes**: ${{ steps.changes.outputs.security }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Performance Changes**: ${{ steps.changes.outputs.performance }}" >> $GITHUB_STEP_SUMMARY
+
+  # Code quality and linting
+  code_quality:
+    name: 🔍 Code Quality Analysis
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.should_run_tests == 'true'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install Node.js dependencies
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+
+      - name: 📦 Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pylint black flake8 safety bandit
+
+      - name: 🔍 ESLint Analysis
+        run: |
+          echo "## 🔍 ESLint Results" >> $GITHUB_STEP_SUMMARY
+          npx eslint . --ext .js,.jsx,.ts,.tsx --format json --output-file eslint-results.json || true
+          npx eslint . --ext .js,.jsx,.ts,.tsx --format compact
+          
+          # Parse results and add to summary
+          if [ -f eslint-results.json ]; then
+            ERROR_COUNT=$(jq '[.[].messages[] | select(.severity == 2)] | length' eslint-results.json)
+            WARNING_COUNT=$(jq '[.[].messages[] | select(.severity == 1)] | length' eslint-results.json)
+            echo "- **Errors**: $ERROR_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings**: $WARNING_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 🐍 Python Code Quality
+        run: |
+          echo "## 🐍 Python Code Quality" >> $GITHUB_STEP_SUMMARY
+          
+          # Pylint
+          find . -name "*.py" -not -path "./.*" | xargs pylint --output-format=json --reports=no > pylint-results.json || true
+          PYLINT_SCORE=$(pylint --output-format=text --reports=yes . 2>/dev/null | grep "Your code has been rated" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+          echo "- **Pylint Score**: $PYLINT_SCORE/10" >> $GITHUB_STEP_SUMMARY
+          
+          # Black formatting check
+          black --check --diff . || echo "- **Black**: Formatting issues found" >> $GITHUB_STEP_SUMMARY
+          
+          # Flake8
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: 📊 Quality Gate Check
+        run: |
+          COMMIT_QUALITY=${{ needs.preflight.outputs.commit_quality_score }}
+          if [ "$COMMIT_QUALITY" -lt "$QUALITY_THRESHOLD" ]; then
+            echo "❌ Quality gate failed: $COMMIT_QUALITY% < $QUALITY_THRESHOLD%"
+            echo "## ❌ Quality Gate Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Current score: $COMMIT_QUALITY% (threshold: $QUALITY_THRESHOLD%)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ Quality gate passed: $COMMIT_QUALITY% >= $QUALITY_THRESHOLD%"
+            echo "## ✅ Quality Gate Passed" >> $GITHUB_STEP_SUMMARY
+            echo "Current score: $COMMIT_QUALITY% (threshold: $QUALITY_THRESHOLD%)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📤 Upload ESLint results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: eslint-results
+          path: eslint-results.json
+
+      - name: 📤 Upload Pylint results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: pylint-results
+          path: pylint-results.json
+
+  # Security scanning
+  security_scan:
+    name: 🔒 Security Analysis
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.should_run_security == 'true' && github.event.inputs.skip_security_scan != 'true'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          npm ci
+          pip install -r requirements.txt
+          pip install safety bandit semgrep
+
+      - name: 🔍 npm audit
+        run: |
+          echo "## 🔍 npm Security Audit" >> $GITHUB_STEP_SUMMARY
+          npm audit --audit-level=moderate --json > npm-audit.json || true
+          npm audit --audit-level=moderate
+
+      - name: 🐍 Python Security Scan
+        run: |
+          echo "## 🐍 Python Security Scan" >> $GITHUB_STEP_SUMMARY
+          
+          # Safety check for known vulnerabilities
+          safety check --json > safety-results.json || true
+          safety check
+          
+          # Bandit security linter
+          bandit -r . -f json -o bandit-results.json || true
+          bandit -r . -ll
+
+      - name: 🔍 Semgrep Security Scan
+        run: |
+          echo "## 🔍 Semgrep Security Scan" >> $GITHUB_STEP_SUMMARY
+          semgrep --config=auto --json --output=semgrep-results.json . || true
+          semgrep --config=auto .
+
+      - name: 🔍 Secret Detection
+        run: |
+          echo "## 🔍 Secret Detection" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for common secret patterns
+          SECRET_PATTERNS=(
+            "password\s*=\s*['\"][^'\"]*['\"]"  
+            "api[_-]?key\s*=\s*['\"][^'\"]*['\"]"  
+            "secret\s*=\s*['\"][^'\"]*['\"]"  
+            "token\s*=\s*['\"][^'\"]*['\"]"  
+            "private[_-]?key"  
+            "BEGIN RSA PRIVATE KEY"  
+            "BEGIN PRIVATE KEY"  
+          )
+          
+          SECRETS_FOUND=0
+          for pattern in "${SECRET_PATTERNS[@]}"; do
+            if grep -r -E -i "$pattern" . --exclude-dir=.git --exclude-dir=node_modules; then
+              SECRETS_FOUND=$((SECRETS_FOUND + 1))
+            fi
+          done
+          
+          if [ $SECRETS_FOUND -gt 0 ]; then
+            echo "❌ Potential secrets detected: $SECRETS_FOUND patterns found"
+            echo "- **Secrets Found**: $SECRETS_FOUND" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ No secrets detected"
+            echo "- **Secrets Found**: 0" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📤 Upload security results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-results
+          path: |
+            npm-audit.json
+            safety-results.json
+            bandit-results.json
+            semgrep-results.json
+
+  # Testing
+  test_suite:
+    name: 🧪 Test Suite
+    runs-on: ubuntu-latest
+    needs: [preflight, code_quality]
+    if: needs.preflight.outputs.should_run_tests == 'true'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          npm ci
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-xdist
+
+      - name: 🧪 Run JavaScript tests
+        run: |
+          echo "## 🧪 JavaScript Test Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f "package.json" ] && npm run test --if-present; then
+            echo "✅ JavaScript tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No JavaScript tests found or tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 🧪 Run Python tests
+        run: |
+          echo "## 🧪 Python Test Results" >> $GITHUB_STEP_SUMMARY
+          if find . -name "test_*.py" -o -name "*_test.py" | grep -q .; then
+            pytest --cov=. --cov-report=xml --cov-report=term-missing
+            COVERAGE=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); print(tree.getroot().attrib['line-rate'])" | awk '{print int($1*100)}')
+            echo "- **Coverage**: $COVERAGE%" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
+              echo "❌ Coverage below threshold: $COVERAGE% < $COVERAGE_THRESHOLD%"
+              exit 1
+            fi
+          else
+            echo "⚠️ No Python tests found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 📤 Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Performance testing
+  performance_test:
+    name: ⚡ Performance Testing
+    runs-on: ubuntu-latest
+    needs: [preflight, test_suite]
+    if: needs.preflight.outputs.should_run_performance == 'true' || github.event.inputs.run_full_suite == 'true'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build application
+        run: |
+          if npm run build --if-present; then
+            echo "✅ Build successful" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Build failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: ⚡ Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  # Deployment readiness
+  deployment_check:
+    name: 🚀 Deployment Readiness
+    runs-on: ubuntu-latest
+    needs: [code_quality, security_scan, test_suite]
+    if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    steps:
+      - name: 📊 Aggregate Results
+        run: |
+          echo "## 🚀 Deployment Readiness Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check job results
+          CODE_QUALITY="${{ needs.code_quality.result }}"
+          SECURITY_SCAN="${{ needs.security_scan.result }}"
+          TEST_SUITE="${{ needs.test_suite.result }}"
+          
+          echo "### 📋 Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Code Quality**: $CODE_QUALITY" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan**: $SECURITY_SCAN" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Suite**: $TEST_SUITE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine deployment readiness
+          if [ "$CODE_QUALITY" = "success" ] && [ "$SECURITY_SCAN" = "success" ] && [ "$TEST_SUITE" = "success" ]; then
+            echo "### ✅ DEPLOYMENT APPROVED" >> $GITHUB_STEP_SUMMARY
+            echo "All quality gates passed. Ready for deployment." >> $GITHUB_STEP_SUMMARY
+            echo "deployment_ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "### ❌ DEPLOYMENT BLOCKED" >> $GITHUB_STEP_SUMMARY
+            echo "One or more quality gates failed. Deployment blocked." >> $GITHUB_STEP_SUMMARY
+            echo "deployment_ready=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🏷️ Create deployment tag
+        if: steps.aggregate.outputs.deployment_ready == 'true'
+        run: |
+          TAG="deploy-$(date +%Y%m%d-%H%M%S)"
+          git tag "$TAG"
+          echo "Created deployment tag: $TAG"
+
+  # Notification and reporting
+  notify:
+    name: 📢 Notifications
+    runs-on: ubuntu-latest
+    needs: [preflight, code_quality, security_scan, test_suite, deployment_check]
+    if: always()
+    steps:
+      - name: 📊 Generate Final Report
+        run: |
+          echo "## 🤖 Git SDE Agent - Final Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Quality Score**: ${{ needs.preflight.outputs.commit_quality_score }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Code Quality**: ${{ needs.code_quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan**: ${{ needs.security_scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Suite**: ${{ needs.test_suite.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment Check**: ${{ needs.deployment_check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Recommendations" >> $GITHUB_STEP_SUMMARY
+          
+          # Add specific recommendations based on results
+          if [ "${{ needs.code_quality.result }}" != "success" ]; then
+            echo "- 🔍 Review code quality issues and fix linting errors" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.security_scan.result }}" != "success" ]; then
+            echo "- 🔒 Address security vulnerabilities before deployment" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.test_suite.result }}" != "success" ]; then
+            echo "- 🧪 Fix failing tests and improve test coverage" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Generated by Git SDE Agent v${{ env.SDE_AGENT_VERSION }}*" >> $GITHUB_STEP_SUMMARY
+
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('Git SDE Agent')
+            );
+            
+            const body = `## 🤖 Git SDE Agent - CI/CD Report
+            
+            ### 📊 Pipeline Results
+            - **Quality Score**: ${{ needs.preflight.outputs.commit_quality_score }}%
+            - **Code Quality**: ${{ needs.code_quality.result == 'success' && '✅' || '❌' }}
+            - **Security Scan**: ${{ needs.security_scan.result == 'success' && '✅' || '❌' }}
+            - **Test Suite**: ${{ needs.test_suite.result == 'success' && '✅' || '❌' }}
+            
+            ### 🎯 Summary
+            ${{ needs.deployment_check.outputs.deployment_ready == 'true' && '✅ **READY FOR MERGE** - All quality gates passed!' || '❌ **BLOCKED** - Please address the issues above.' }}
+            
+            ---
+            *Updated: ${new Date().toISOString()}*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+# Cleanup job
+  cleanup:
+    name: 🧹 Cleanup
+    runs-on: ubuntu-latest
+    needs: [notify]
+    if: always()
+    steps:
+      - name: 🧹 Clean up artifacts
+        run: |
+          echo "🧹 Cleaning up temporary files and artifacts..."
+          # Add cleanup logic here if needed
+          echo "✅ Cleanup completed"

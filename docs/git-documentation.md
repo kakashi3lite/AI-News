@@ -10,6 +10,7 @@ This documentation hub provides comprehensive guidance for Git workflows, best p
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
+| [Git SDE Agent Guide](./git-sde-agent-guide.md) | **NEW** - Autonomous Git workflow management | All developers |
 | [Git Workflow Guide](./git-workflow.md) | Complete Git workflow documentation | All developers |
 | [Contributing Guidelines](../CONTRIBUTING.md) | Contribution process and standards | Contributors |
 | [Changelog](../CHANGELOG.md) | Project history and releases | All stakeholders |
@@ -17,11 +18,21 @@ This documentation hub provides comprehensive guidance for Git workflows, best p
 
 ## 🚀 Getting Started
 
+### Git SDE Agent Integration
+
+🤖 **NEW**: This project now includes an autonomous **Git SDE Agent** that manages workflows, performs AI-powered code reviews, and automates CI/CD processes. See the [Git SDE Agent Guide](./git-sde-agent-guide.md) for complete documentation.
+
+**Current Configuration:**
+- **User:** kakashi3lite
+- **Email:** swanandtanavade100@gmail.com
+- **Agent Status:** Active and monitoring repository
+
 ### For New Contributors
 
 1. **Read the basics**:
-   - [Contributing Guidelines](../CONTRIBUTING.md) - Start here for contribution process
-   - [Git Workflow Guide](./git-workflow.md) - Comprehensive Git workflow
+   - [Git SDE Agent Guide](./git-sde-agent-guide.md) - **START HERE** for autonomous workflow
+   - [Contributing Guidelines](../CONTRIBUTING.md) - Contribution process and standards
+   - [Git Workflow Guide](./git-workflow.md) - Traditional Git workflow
 
 2. **Set up your environment**:
    ```bash

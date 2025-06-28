@@ -15,6 +15,7 @@ const { XMLParser } = require('fast-xml-parser');
 const crypto = require('crypto');
 const fs = require('fs').promises;
 const path = require('path');
+const { spawn } = require('child_process');
 const { errorHandler, ERROR_TYPES } = require('../lib/errorHandler');
 
 // News source configurations
@@ -251,32 +252,27 @@ class NewsIngestionEngine {
         }
       });
 
-        const parsed = this.xmlParser.parse(response.data);
-        const items = this.extractRSSItems(parsed);
-        
-        const articles = items.map((item, index) => this.normalizeRSSArticle(item, source, index));
-        
-        this.lastFetch.set(cacheKey, now);
-        console.log(`✅ ${source.name}: ${articles.length} articles`);
-        
-        return { articles };
-      },
-      {
-        name: `rss_fetch_${source.name}`,
-        retryOptions: {
-          maxRetries: 3,
-          retryableErrors: [ERROR_TYPES.NETWORK, ERROR_TYPES.TIMEOUT, ERROR_TYPES.EXTERNAL_API]
-        },
-        circuitBreakerOptions: {
-          failureThreshold: 3,
-          resetTimeout: 300000 // 5 minutes
-        },
-        fallback: async () => {
-          console.log(`🔄 Using cached data for ${source.name}`);
-          return await this.getCachedRSSData(source) || { articles: [] };
-        }
+      const parsed = this.xmlParser.parse(response.data);
+      const items = this.extractRSSItems(parsed);
+      
+      const articles = items.map((item, index) => this.normalizeRSSArticle(item, source, index));
+      
+      this.lastFetch.set(cacheKey, now);
+      console.log(`✅ ${source.name}: ${articles.length} articles`);
+      
+      return { articles };
+    } catch (error) {
+      console.error(`❌ Failed to fetch RSS from ${source.name}:`, error.message);
+      
+      // Try to get cached data as fallback
+      const cachedData = await this.getCachedRSSData(source);
+      if (cachedData && cachedData.articles) {
+        console.log(`🔄 Using cached data for ${source.name}`);
+        return cachedData;
       }
-    );
+      
+      throw error;
+    }
   }
 
   /**
@@ -554,40 +550,46 @@ class NewsIngestionEngine {
     
     try {
       // Try transformer-based classification first
-      const { spawn } = require('child_process');
-      const path = require('path');
-      
       // Check if transformer classifier is available
       const transformerPath = path.join(__dirname, 'transformer_classifier.py');
-      const fs = require('fs');
+      const fsSync = require('fs');
       
-      if (fs.existsSync(transformerPath)) {
+      if (fsSync.existsSync(transformerPath)) {
         console.log('🤖 Using transformer-based classification...');
         
         // Prepare articles for Python classifier
-        const articlesData = JSON.stringify(articles.map(article => ({
+        const articlesData = articles.map(article => ({
           title: article.title,
           description: article.description,
           content: article.content,
           source: article.source,
           url: article.url
-        })));
+        }));
         
-        // Call Python transformer classifier
-        const pythonProcess = spawn('python', ['-c', `
+        // Create temporary file for secure data transfer
+        const tempFile = path.join(this.cacheDir, `articles_${Date.now()}.json`);
+        await fs.writeFile(tempFile, JSON.stringify(articlesData));
+        
+        // Call Python transformer classifier with file input
+        const pythonScript = `
 import asyncio
 import json
 import sys
+import os
 sys.path.append('${__dirname.replace(/\\/g, '/')}')
 from transformer_classifier import classify_topics_transformer
 
 async def main():
-    articles = json.loads('${articlesData.replace(/'/g, "\\'")}')
+    with open('${tempFile.replace(/\\/g, '/')}', 'r', encoding='utf-8') as f:
+        articles = json.load(f)
     results = await classify_topics_transformer(articles)
     print(json.dumps(results))
+    os.unlink('${tempFile.replace(/\\/g, '/')}')
 
 asyncio.run(main())
-        `]);
+        `;
+        
+        const pythonProcess = spawn('python', ['-c', pythonScript]);
         
         let output = '';
         let error = '';
@@ -601,7 +603,14 @@ asyncio.run(main())
         });
         
         return new Promise((resolve) => {
-          pythonProcess.on('close', (code) => {
+          pythonProcess.on('close', async (code) => {
+            // Cleanup temporary file if it still exists
+            try {
+              await fs.unlink(tempFile);
+            } catch (cleanupError) {
+              // File might already be deleted by Python script
+            }
+            
             if (code === 0 && output.trim()) {
               try {
                 const classifiedArticles = JSON.parse(output.trim());
@@ -609,22 +618,22 @@ asyncio.run(main())
                 resolve(classifiedArticles);
               } catch (parseError) {
                 console.warn('⚠️ Failed to parse transformer results, falling back to keyword classification');
-                resolve(classifyTopicsKeyword(articles));
+                resolve(this.classifyTopicsKeyword(articles));
               }
             } else {
               console.warn(`⚠️ Transformer classification failed (code: ${code}), falling back to keyword classification`);
               if (error) console.warn('Error:', error);
-              resolve(classifyTopicsKeyword(articles));
+              resolve(this.classifyTopicsKeyword(articles));
             }
           });
         });
       } else {
         console.log('📝 Transformer classifier not found, using keyword classification');
-        return classifyTopicsKeyword(articles);
+        return this.classifyTopicsKeyword(articles);
       }
     } catch (error) {
       console.warn('⚠️ Error in transformer classification, falling back to keyword classification:', error.message);
-      return classifyTopicsKeyword(articles);
+      return this.classifyTopicsKeyword(articles);
     }
   }
 
@@ -697,7 +706,15 @@ asyncio.run(main())
       .sort()
       .join(' ');
     
-    const urlDomain = article.url ? new URL(article.url).hostname : '';
+    let urlDomain = '';
+    if (article.url) {
+      try {
+        urlDomain = new URL(article.url).hostname;
+      } catch (error) {
+        // Handle invalid URLs gracefully
+        urlDomain = article.url.replace(/[^a-zA-Z0-9.-]/g, '').slice(0, 50);
+      }
+    }
     
     return crypto.createHash('md5')
       .update(`${titleWords}:${urlDomain}`)
