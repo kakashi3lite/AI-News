@@ -40,9 +40,8 @@ git clone https://github.com/your-username/ai-news-dashboard.git
 cd ai-news-dashboard
 npm install
 
-# Setup environment
-cp .env.example .env.local
-# Edit .env.local with your configuration
+# Setup API keys securely
+npm run setup:keys
 
 # Setup database
 npm run db:migrate
@@ -114,6 +113,41 @@ ai-news-dashboard/
 ├── public/             # Static assets
 └── tests/              # Test files
 ```
+
+---
+
+## 🔐 Security & API Management
+
+The AI News Dashboard includes a comprehensive **SecureKeyAgent** system for managing API keys securely:
+
+### Quick Setup
+```bash
+# Interactive API key setup (recommended)
+npm run setup:keys
+
+# Windows PowerShell version
+npm run setup:keys:windows
+
+# Validate existing keys
+npm run validate:keys
+```
+
+### Supported APIs
+- **OpenAI**: GPT models and embeddings
+- **Google AI**: Gemini Pro integration
+- **NewsAPI**: News data aggregation
+- **YouTube**: Video content integration
+- **Anthropic**: Claude AI models
+
+### Security Features
+- ✅ Secure storage in `.env.local`
+- ✅ Format validation for all providers
+- ✅ Live API testing and validation
+- ✅ Automatic `.gitignore` protection
+- ✅ Windows ACL permissions
+- ✅ Comprehensive error handling
+
+**📖 Complete Guide**: [API Security Documentation](docs/API_SECURITY_GUIDE.md)
 
 ---
 

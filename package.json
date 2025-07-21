@@ -43,7 +43,19 @@
     "clean": "rm -rf .next node_modules",
     "reinstall": "npm run clean && npm install",
     "precommit": "npm run lint && npm run type-check && npm run test",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "setup:keys": "node scripts/secure-key-agent.js",
+    "setup:keys:interactive": "node scripts/secure-key-agent.js --interactive",
+    "setup:keys:validate": "node scripts/secure-key-agent.js --validate",
+    "setup:keys:audit": "node scripts/secure-key-agent.js --audit",
+    "validate:keys": "node scripts/validate-api-keys-new.js",
+    "validate:keys:quick": "node scripts/validate-api-keys-new.js --quick",
+    "validate:keys:ci": "node scripts/validate-api-keys-new.js --ci",
+    "validate:environment": "node scripts/validate-environment.js",
+    "validate:environment:production": "node scripts/validate-environment.js --production",
+    "security:audit-environment": "node scripts/validate-environment.js --security-audit",
+    "test:api-keys": "npm run validate:keys",
+    "security:check-keys": "npm run validate:keys && npm run validate:environment && npm run security:audit"
   },
   "dependencies": {
     "next": "^14.0.4",
