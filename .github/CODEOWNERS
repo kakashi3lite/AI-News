@@ -1,0 +1,6 @@
+*       @DrNewsForge
+app/    @frontend-team
+components/ @frontend-team
+news/   @backend-team
+agents/ @mlops-team
+mlops/  @mlops-team

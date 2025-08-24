@@ -517,3 +517,17 @@ Contributors are recognized in:
 **Thank you for contributing to AI News Dashboard! 🙏**
 
 *Together, we're building the future of context-aware news consumption.*
+## 🛠 Development Commands
+
+```bash
+npm run lint        # ESLint
+npm test            # Node tests
+pytest              # Python tests
+```
+
+### 🔖 Triage Labels
+Use labels: `bug`, `feature`, `chore`, `docs` for issues and PRs.
+
+### 📝 Commit & PR Conventions
+- Follow Conventional Commits (`feat:`, `fix:`, `chore:`)
+- Reference issues with `Closes #123`
