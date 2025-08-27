@@ -5,6 +5,8 @@ on:
     branches:
       - chore/ci-playwright-context
       - feat/ios-context-saving
+      - feat/ios-env-scoped-store
+      - chore/e2e-api-auth-meta
 
 jobs:
   open-or-update-pr:
@@ -25,91 +27,35 @@ jobs:
             const branch = context.ref.replace('refs/heads/', '');
             const prTitleMap = {
               'chore/ci-playwright-context': 'chore(ci): add Playwright context-saving docs, tests, and workflow',
-              'feat/ios-context-saving': 'feat(ios): add AINewsKit Swift package and iOS context-saving docs'
+              'feat/ios-context-saving': 'feat(ios): add AINewsKit Swift package and iOS context-saving docs',
+              'feat/ios-env-scoped-store': 'feat(ios): environment-scoped token store + session metadata and migration',
+              'chore/e2e-api-auth-meta': 'feat(e2e): API-driven auth with env/role-scoped storage + metadata + CI pruning'
             };
             const prBodyMap = {
-              'chore/ci-playwright-context': `
-              This PR adds a smart Playwright setup focused on secure, fast context saving.
-
-              Goals
-              - Role-based storageState with TTL and refresh
-              - Env-driven config and reporters
-              - Auto webServer (Next dev) and artifacts in CI
-
-              Key Changes
-              - tests/playwright.config.ts (env toggles, reporters, webServer)
-              - tests/e2e/auth.setup.ts (role storage; UI-driven login)
-              - tests/e2e/* (fixtures, helpers, page objects, examples)
-              - docs/testing/context-saving.md (strategy)
-
-              Acceptance Criteria
-              - Local: 
-                TEST_EMAIL=... TEST_PASSWORD=... npx playwright test --config=tests/playwright.config.ts
-              - CI: enable with repo variable RUN_E2E=true and secrets for E2E creds
-
-              Security
-              - .auth/ ignored, no secrets in repo, tokens never logged.
-              `,
-              'feat/ios-context-saving': `
-              Secure, simple iOS context saving with Swift 6.
-
-              Goals
-              - Keychain-backed TokenStore (actor)
-              - AuthClient (login/refresh) and APIClient (authorized requests + 401 refresh)
-              - Clear docs for integration
-
-              Key Changes
-              - ios/Sources/AINewsKit/* (Auth, Networking, Support)
-              - docs/ios/context-saving.md and ios/README.md
-
-              Acceptance Criteria
-              - Package builds (iOS 17, Swift 6)
-              - Sample usage from README compiles and saves tokens in Keychain
-
-              Security
-              - No token logs, Keychain only, ATS friendly.
-              `
+              'chore/ci-playwright-context': `Adds Playwright context saving: role-based storageState with TTL, env-driven config, auto webServer, artifacts. Usage and security documented.`,
+              'feat/ios-context-saving': `Secure iOS context saving with AINewsKit: TokenStore, AuthClient, APIClient, docs. Keychain-only, no token logs.`,
+              'feat/ios-env-scoped-store': `Adds EnvironmentScopedTokenStore and SessionMetadata. Per-env sessions, migration from legacy store, drift-ready. Docs updated.`,
+              'chore/e2e-api-auth-meta': `API-driven login, env/role-scoped storage files with <file>.meta.json sidecar (claimsHash, timestamps), CI pruning, /api/v1/auth/me stub.`
             };
 
             const title = prTitleMap[branch] || `Automated PR for ${branch}`;
             const body = prBodyMap[branch] || 'Automated PR opened by auto-pr workflow.';
 
-            // Check if PR already exists
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
+            const { data: prs } = await github.rest.pulls.list({ owner: context.repo.owner, repo: context.repo.repo, head: `${context.repo.owner}:${branch}`, state: 'open' });
             if (prs.length > 0) {
               const pr = prs[0];
               await github.rest.pulls.update({ owner: context.repo.owner, repo: context.repo.repo, pull_number: pr.number, title, body });
-              core.info(`Updated existing PR #${pr.number} for ${branch}`);
             } else {
-              const { data: pr } = await github.rest.pulls.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-                head: branch,
-                base: 'main'
-              });
-              core.info(`Created PR #${pr.number} for ${branch}`);
+              await github.rest.pulls.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, head: branch, base: 'main' });
             }
 
       - name: Label PR
-        if: ${{ always() }}
         uses: actions/github-script@v7
         with:
           script: |
             const branch = context.ref.replace('refs/heads/', '');
             const labels = branch.startsWith('feat/ios') ? ['ios','context-saving','feat'] : ['ci','e2e','context-saving'];
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            });
+            const { data: prs } = await github.rest.pulls.list({ owner: context.repo.owner, repo: context.repo.repo, head: `${context.repo.owner}:${branch}`, state: 'open' });
             if (prs.length === 0) return;
             await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prs[0].number, labels });
 

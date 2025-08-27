@@ -22,6 +22,12 @@ ios/
       RequestBuilder.swift # tiny request helper
     Support/
       Keychain.swift       # thin Keychain wrapper
+
+## Environment-Scoped Sessions (Advanced)
+- Use `EnvironmentScopedTokenStore` to persist sessions per environment (host), e.g., `localhost`, `staging.example.com`, `api.example.com`.
+- Stores `SessionMetadata` alongside tokens: schema version, `envKey`, timestamps, and a `claimsHash` for drift detection.
+- Migrate from legacy `TokenStore` with `migrateIfNeeded(fromLegacy:baseURL:)`.
+- Validate claims on launch or resume; if hash changes, refresh or re-login safely.
 ```
 
 ## Quick Start
