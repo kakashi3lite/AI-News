@@ -1,0 +1,115 @@
+name: Auto PRs for feature branches
+
+on:
+  push:
+    branches:
+      - chore/ci-playwright-context
+      - feat/ios-context-saving
+
+jobs:
+  open-or-update-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or update PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const prTitleMap = {
+              'chore/ci-playwright-context': 'chore(ci): add Playwright context-saving docs, tests, and workflow',
+              'feat/ios-context-saving': 'feat(ios): add AINewsKit Swift package and iOS context-saving docs'
+            };
+            const prBodyMap = {
+              'chore/ci-playwright-context': `
+              This PR adds a smart Playwright setup focused on secure, fast context saving.
+
+              Goals
+              - Role-based storageState with TTL and refresh
+              - Env-driven config and reporters
+              - Auto webServer (Next dev) and artifacts in CI
+
+              Key Changes
+              - tests/playwright.config.ts (env toggles, reporters, webServer)
+              - tests/e2e/auth.setup.ts (role storage; UI-driven login)
+              - tests/e2e/* (fixtures, helpers, page objects, examples)
+              - docs/testing/context-saving.md (strategy)
+
+              Acceptance Criteria
+              - Local: 
+                TEST_EMAIL=... TEST_PASSWORD=... npx playwright test --config=tests/playwright.config.ts
+              - CI: enable with repo variable RUN_E2E=true and secrets for E2E creds
+
+              Security
+              - .auth/ ignored, no secrets in repo, tokens never logged.
+              `,
+              'feat/ios-context-saving': `
+              Secure, simple iOS context saving with Swift 6.
+
+              Goals
+              - Keychain-backed TokenStore (actor)
+              - AuthClient (login/refresh) and APIClient (authorized requests + 401 refresh)
+              - Clear docs for integration
+
+              Key Changes
+              - ios/Sources/AINewsKit/* (Auth, Networking, Support)
+              - docs/ios/context-saving.md and ios/README.md
+
+              Acceptance Criteria
+              - Package builds (iOS 17, Swift 6)
+              - Sample usage from README compiles and saves tokens in Keychain
+
+              Security
+              - No token logs, Keychain only, ATS friendly.
+              `
+            };
+
+            const title = prTitleMap[branch] || `Automated PR for ${branch}`;
+            const body = prBodyMap[branch] || 'Automated PR opened by auto-pr workflow.';
+
+            // Check if PR already exists
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open'
+            });
+            if (prs.length > 0) {
+              const pr = prs[0];
+              await github.rest.pulls.update({ owner: context.repo.owner, repo: context.repo.repo, pull_number: pr.number, title, body });
+              core.info(`Updated existing PR #${pr.number} for ${branch}`);
+            } else {
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                head: branch,
+                base: 'main'
+              });
+              core.info(`Created PR #${pr.number} for ${branch}`);
+            }
+
+      - name: Label PR
+        if: ${{ always() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const labels = branch.startsWith('feat/ios') ? ['ios','context-saving','feat'] : ['ci','e2e','context-saving'];
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open'
+            });
+            if (prs.length === 0) return;
+            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prs[0].number, labels });
+
