@@ -22,3 +22,9 @@ yarn-error.log*
 
 # MacOS
 .DS_Store
+
+# Playwright artifacts
+playwright-report/
+test-results/
+blob-report/
+.auth/
