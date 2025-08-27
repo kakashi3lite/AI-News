@@ -50,13 +50,20 @@ jobs:
       - name: Run Playwright tests
         env:
           UI_BASE_URL: http://localhost:3000
+          PW_AUTH_STRATEGY: api
           # Optional creds for context saving (set repo secrets/variables to use)
           TEST_EMAIL: ${{ secrets.E2E_EMAIL }}
           TEST_PASSWORD: ${{ secrets.E2E_PASSWORD }}
           TEST_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           TEST_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           PW_ROLES: user,admin
-        run: npx playwright test --config=tests/playwright.config.ts
+        run: |
+          # Prune stale storage older than TTL (default 24h)
+          TTL_HOURS=${PW_STORAGE_TTL_HOURS:-24}
+          if [ -d tests/.auth ]; then
+            find tests/.auth -type f -mmin +$((TTL_HOURS*60)) -print -delete || true
+          fi
+          npx playwright test --config=tests/playwright.config.ts
 
       - name: Upload Playwright report
         if: always()
@@ -64,4 +71,3 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report
-

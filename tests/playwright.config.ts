@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env.CI;
 const baseURL = process.env.UI_BASE_URL || 'http://localhost:3000';
+const authStrategy = process.env.PW_AUTH_STRATEGY || 'ui'; // 'api' | 'ui'
 
 export default defineConfig({
   testDir: './e2e',
@@ -31,7 +32,6 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
-  globalSetup: require.resolve('./e2e/auth.setup'),
+  globalSetup: require.resolve(authStrategy === 'api' ? './e2e/auth.api.setup' : './e2e/auth.setup'),
   outputDir: 'test-results',
 });
-
