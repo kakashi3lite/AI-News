@@ -5,6 +5,8 @@ on:
     branches:
       - chore/ci-playwright-context
       - feat/ios-context-saving
+      - feat/ios-env-scoped-store
+      - chore/e2e-api-auth-meta
 
 jobs:
   open-or-update-pr:
@@ -25,7 +27,9 @@ jobs:
             const branch = context.ref.replace('refs/heads/', '');
             const prTitleMap = {
               'chore/ci-playwright-context': 'chore(ci): add Playwright context-saving docs, tests, and workflow',
-              'feat/ios-context-saving': 'feat(ios): add AINewsKit Swift package and iOS context-saving docs'
+              'feat/ios-context-saving': 'feat(ios): add AINewsKit Swift package and iOS context-saving docs',
+              'feat/ios-env-scoped-store': 'feat(ios): environment-scoped token store + session metadata and migration',
+              'chore/e2e-api-auth-meta': 'feat(e2e): API-driven auth with env/role-scoped storage + metadata + CI pruning'
             };
             const prBodyMap = {
               'chore/ci-playwright-context': `
@@ -68,6 +72,12 @@ jobs:
 
               Security
               - No token logs, Keychain only, ATS friendly.
+              `,
+              'feat/ios-env-scoped-store': `
+              Adds EnvironmentScopedTokenStore and SessionMetadata. Per-env sessions, migration from legacy store, drift-ready. Docs updated.
+              `,
+              'chore/e2e-api-auth-meta': `
+              API-driven login, env/role-scoped storage files with <file>.meta.json sidecar (claimsHash, timestamps), CI pruning, /api/v1/auth/me stub.
               `
             };
 
@@ -112,4 +122,3 @@ jobs:
             });
             if (prs.length === 0) return;
             await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prs[0].number, labels });
-
