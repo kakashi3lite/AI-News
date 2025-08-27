@@ -55,4 +55,3 @@ public struct AuthClient: Sendable {
         return tokens.accessToken
     }
 }
-
