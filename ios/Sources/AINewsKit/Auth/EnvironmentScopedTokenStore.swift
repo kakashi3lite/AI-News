@@ -46,7 +46,7 @@ public actor EnvironmentScopedTokenStore {
         return envSession
     }
 
-    public func save(tokens: AuthTokens, for baseURL: URL, claimsHash: String? = nil) throws {
+    public func save(tokens: AuthTokens, for baseURL: URL, claimsHash: String? = nil) async throws {
         let env = Self.envKey(from: baseURL)
         var meta = (try load(for: baseURL))?.metadata ?? SessionMetadata(envKey: env)
         meta.lastValidatedAt = Date()
@@ -67,4 +67,3 @@ public actor EnvironmentScopedTokenStore {
         cache[env] = nil
     }
 }
-

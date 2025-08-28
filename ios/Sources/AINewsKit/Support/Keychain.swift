@@ -10,15 +10,17 @@ enum KeychainError: Error { case unexpectedStatus(OSStatus) }
 
 enum Keychain {
     static func set(_ data: Data, for item: KeychainItem) throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: item.service,
-            kSecAttrAccount as String: item.account
+            kSecAttrAccount as String: item.account,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
         let attributes: [String: Any] = [kSecValueData as String: data]
 
         SecItemDelete(query as CFDictionary)
-        let status = SecItemAdd(query.merging(attributes) { _, new in new } as CFDictionary, nil)
+        query.merge(attributes) { _, new in new }
+        let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.unexpectedStatus(status) }
     }
 
@@ -47,4 +49,3 @@ enum Keychain {
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError.unexpectedStatus(status) }
     }
 }
-
