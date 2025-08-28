@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#endif
 
 public struct SessionMetadata: Codable, Sendable {
     public static let schemaVersion = 1
@@ -23,13 +26,13 @@ public enum ClaimsHasher {
         let sorted = (roles.map { $0.lowercased() } + permissions.map { $0.lowercased() }).sorted()
         let joined = sorted.joined(separator: "|")
         #if canImport(CryptoKit)
-        import CryptoKit
         let digest = SHA256.hash(data: Data(joined.utf8))
         return Data(digest).base64EncodedString()
         #else
-        // Fallback simple hash (not cryptographic, but stable)
-        return String(joined.hashValue)
+        // Deterministic djb2 hash hex (non-cryptographic)
+        var hash: UInt64 = 5381
+        for b in joined.utf8 { hash = ((hash << 5) &+ hash) &+ UInt64(b) }
+        return String(format: "%016llx", hash)
         #endif
     }
 }
-
