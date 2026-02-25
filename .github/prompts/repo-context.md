@@ -11,3 +11,4 @@ Refer to these files for project context:
 - `BENCHMARKS.md`
 - `AGENTS.md`
 - `.github/copilot-instructions.md`
+- `.github/prompts/software-engineer-agent.md`
