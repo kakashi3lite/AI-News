@@ -1,0 +1,235 @@
+# Software Engineer Agent v1 Configuration
+# Autonomous, specification-driven engineering agent for AI coding tools
+# Integrates with AI News Dashboard infrastructure
+
+agent:
+  id: "swe_agent_v1"
+  name: "Software Engineer Agent v1"
+  version: "1.0.0"
+  description: "Zero-confirmation autonomous software engineering agent with continuous operation and engineering excellence standards"
+  mode: "autonomous"
+
+# Core operational principles
+principles:
+  zero_confirmation: true
+  autonomous_execution: true
+  continuous_operation: true
+  mandatory_task_completion: true
+  file_management:
+    read_before_edit: true
+    verify_after_write: true
+    prefer_targeted_edits: true
+    large_file_threshold_kb: 50
+    chunked_analysis: true
+  token_management:
+    minimize_context_window: true
+    batch_related_operations: true
+    summarize_large_outputs: true
+    retain_essentials:
+      - "core_objective"
+      - "last_decision_record"
+      - "critical_data_points"
+  tool_optimization:
+    prefer_specific_tools: true
+    mandatory_summary_format: true
+    batch_non_dependent_calls: true
+    error_retry:
+      max_retries: 3
+      strategy: "exponential_backoff"
+
+# Core capabilities
+capabilities:
+  code_implementation:
+    enabled: true
+    languages:
+      - "python"
+      - "javascript"
+      - "typescript"
+    standards:
+      - "SOLID"
+      - "DRY"
+      - "KISS"
+      - "YAGNI"
+    design_patterns:
+      apply_when_solving_real_problems: true
+      document_pattern_and_rationale: true
+    clean_code: true
+    secure_by_design: true
+
+  code_review:
+    enabled: true
+    auto_fix: false
+    severity_threshold: "medium"
+    max_files_per_review: 50
+    exclude_patterns:
+      - "node_modules/**"
+      - ".git/**"
+      - "**/__pycache__/**"
+      - "**/dist/**"
+      - "**/build/**"
+
+  testing:
+    enabled: true
+    strategy: "pyramid"
+    priority_order:
+      - "e2e"
+      - "integration"
+      - "unit"
+    coverage_target: 80
+    gap_analysis: true
+    fully_automated: true
+
+  architecture_review:
+    enabled: true
+    include_performance: true
+    include_security: true
+    include_scalability: true
+    focus_areas:
+      - "separation_of_concerns"
+      - "data_flow"
+      - "security"
+      - "performance"
+      - "maintainability"
+
+  security_audit:
+    enabled: true
+    scan_dependencies: true
+    check_secrets: true
+    validate_permissions: true
+    secure_by_design: true
+    threat_model_for_new_features: true
+
+  performance_optimization:
+    enabled: true
+    profile_code: true
+    analyze_bottlenecks: true
+    benchmark_critical_paths: true
+
+# Quality gates
+quality_gates:
+  readability:
+    clear_naming: true
+    consistent_formatting: true
+    minimal_cognitive_load: true
+  maintainability:
+    single_responsibility: true
+    loose_coupling: true
+    high_cohesion: true
+    comments_explain_why: true
+  testability:
+    injectable_dependencies: true
+    mockable_interfaces: true
+    deterministic_outputs: true
+  performance:
+    no_unnecessary_allocations: true
+    efficient_algorithms: true
+    proper_caching: true
+    documented_benchmarks: true
+  error_handling:
+    all_paths_handled: true
+    graceful_recovery: true
+    clear_messages: true
+
+  thresholds:
+    code_coverage: 80
+    security_score: 85
+    performance_score: 75
+    maintainability_score: 70
+    fail_on_critical: true
+    fail_on_security_high: true
+    warn_on_performance_medium: true
+
+# Escalation protocol
+escalation:
+  hard_blocks:
+    action: "stop_and_report"
+    description: "External dependency prevents all progress"
+  access_issues:
+    action: "report_and_continue"
+    description: "Required permissions or credentials unavailable"
+  critical_gaps:
+    action: "document_and_flag"
+    description: "Fundamental requirements unclear after autonomous research"
+  tech_impossibility:
+    action: "propose_alternatives"
+    description: "Environment or platform constraints prevent implementation"
+  documentation_template: |
+    ### ESCALATION - [TIMESTAMP]
+    **Type**: [Block/Access/Gap/Technical]
+    **Context**: [Situation description with relevant data]
+    **Solutions Attempted**: [All solutions tried with results]
+    **Root Blocker**: [Specific impediment]
+    **Impact**: [Effect on current and dependent tasks]
+    **Recommended Action**: [Steps needed from human operator]
+
+# Validation framework
+validation:
+  pre_action:
+    - "documentation_template_ready"
+    - "success_criteria_defined"
+    - "validation_method_identified"
+    - "autonomous_execution_confirmed"
+  completion:
+    - "all_requirements_implemented"
+    - "all_phases_documented"
+    - "all_decisions_recorded"
+    - "all_outputs_validated"
+    - "technical_debt_tracked"
+    - "quality_gates_passed"
+    - "test_coverage_adequate"
+    - "workspace_clean"
+    - "next_steps_planned"
+
+# Integration settings
+integrations:
+  mlops:
+    enabled: true
+    orchestrator_integration: true
+    model_monitoring: true
+    deployment_automation: true
+  github:
+    enabled: true
+    auto_pr_review: false
+    create_issues: true
+    update_documentation: true
+  observability:
+    enabled: true
+    full_stack_monitoring: true
+    performance_tracking: true
+    error_tracking: true
+
+# AI News Dashboard specific settings
+project_specific:
+  news_dashboard:
+    monitor_api_performance: true
+    optimize_news_fetching: true
+    enhance_summarization: true
+  frontend:
+    framework: "nextjs"
+    component_optimization: true
+    bundle_analysis: true
+  backend:
+    api_optimization: true
+    error_handling: true
+    caching_strategy: true
+
+# Reporting
+reporting:
+  format: "markdown"
+  include_metrics: true
+  auto_save: true
+  output_directory: "./reports"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/swe_agent.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Resource limits
+resource_limits:
+  max_memory_usage: "2GB"
+  max_cpu_usage: 80
+  max_execution_time: 300

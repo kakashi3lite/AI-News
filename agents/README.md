@@ -29,7 +29,8 @@ The Veteran Developer Agent is an AI-powered development assistant specifically 
 agents/
 ├── veteran_developer_agent.py    # Core agent implementation
 ├── config/
-│   └── agent_config.yaml         # Agent configuration
+│   ├── agent_config.yaml         # Veteran Developer Agent configuration
+│   └── swe_agent_config.yaml     # Software Engineer Agent v1 configuration
 ├── integrations/
 │   └── mlops_integration.py      # MLOps workflow integration
 ├── cli/
