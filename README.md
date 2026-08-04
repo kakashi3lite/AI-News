@@ -67,7 +67,8 @@ bash scripts/build-static.sh /AI-News
 node scripts/serve-static.mjs /AI-News 8080   # → http://localhost:8080/AI-News/dashboard
 ```
 
-Then push `out/` to the `gh-pages` branch and enable Pages:
+Then push `out/` to the `gh-pages` branch and enable Pages. Note: `next build` wipes
+`out/` (including any `.git`), so always init a fresh git repo inside it:
 
 ```bash
 cd out && touch .nojekyll && git init -b gh-pages
