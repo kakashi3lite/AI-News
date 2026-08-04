@@ -36,3 +36,14 @@ GET  /api/cron/ingest   # scheduled ingestion (Bearer: CRON_SECRET)
 ```
 
 **Next Review:** Schedule regular project reviews
+## Deployed (done ✅)
+- [x] GitHub Pages live: https://kakashi3lite.github.io/AI-News/
+- [x] main synced to kakashi3lite/AI-News (old lineage on legacy/ai-news branch)
+- [x] Login + personalized "For You" verified on the live site
+
+## To refresh live data
+```bash
+node --env-file=.env scripts/generate-static-data.mjs   # re-ingest + snapshot
+bash scripts/build-static.sh /AI-News                    # rebuild out/
+cd out && git add -A && git commit -am "refresh data" && git push -f origin gh-pages
+```

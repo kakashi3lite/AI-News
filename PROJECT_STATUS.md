@@ -37,3 +37,10 @@
 - Theme extraction can surface borderline noise terms
 - Watchlist defaults re-sync on ingest (UI edits to default items are overwritten)
 - OpenAI summarization may hit rate limits (falls back to extractive)
+
+## Deployment (live)
+- **Live site**: https://kakashi3lite.github.io/AI-News/ (GitHub Pages, gh-pages branch)
+- **Repo**: https://github.com/kakashi3lite/AI-News — `main` = Market Signal prototype; old lineage preserved at `legacy/ai-news`
+- **Mode**: static export (Next `output: export`) reading build-time JSON snapshots
+- **Login**: local profile vault (email+PIN) — bookmarks, personal watchlist, history, personalized "For You"
+- **Refresh data**: re-run `node --env-file=.env scripts/generate-static-data.mjs` + `bash scripts/build-static.sh /AI-News`, then re-push `out/` to `gh-pages`
