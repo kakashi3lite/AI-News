@@ -1,6 +1,13 @@
 import { ExternalLink, Bookmark } from 'lucide-react';
 import { timeAgo } from './format';
-import { SentimentBadge, ReliabilityBadge, SourceBadge, CategoryBadge } from './badges';
+import {
+  SentimentBadge,
+  ReliabilityBadge,
+  SourceBadge,
+  CategoryBadge,
+  ImpactBadge,
+  VerificationBadge,
+} from './badges';
 import { useUser } from '../../contexts/UserContext';
 
 // Story card with accuracy metadata: source, reliability, sentiment, recency,
@@ -63,6 +70,17 @@ export default function SignalCard({ article, onTagClick, matches = [] }) {
       <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
         {article.summary || article.description}
       </p>
+
+      {/* Impact + verification row */}
+      {(article.impactLabel || article.verification) && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <ImpactBadge label={article.impactLabel} score={article.impactScore} />
+          <VerificationBadge level={article.verification} corroboration={article.corroboration} />
+          {article.outlook && (
+            <span className="text-[11px] text-gray-400 italic">{article.outlook}</span>
+          )}
+        </div>
+      )}
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0">

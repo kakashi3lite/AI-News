@@ -9,6 +9,7 @@ import path from 'node:path';
 import prisma from '../lib/db.js';
 import { ingestAll } from '../lib/ingest.js';
 import { extractThemesFromDb } from '../lib/themes.js';
+import { getDailyCrossword } from '../lib/crossword.js';
 import {
   getTopStories,
   getThemesWithStories,
@@ -35,6 +36,9 @@ const [stories, themes, watchlist, digest] = await Promise.all([
   getDigest(),
 ]);
 
+console.log('🧩 Building today\u2019s news crossword…');
+const crossword = await getDailyCrossword({ date: new Date().toISOString().slice(0, 10) });
+
 const meta = {
   generatedAt: new Date().toISOString(),
   sources: await prisma.source.count(),
@@ -46,9 +50,12 @@ fs.writeFileSync(path.join(outDir, 'news.json'), JSON.stringify({ articles: stor
 fs.writeFileSync(path.join(outDir, 'themes.json'), JSON.stringify({ themes, generatedAt: meta.generatedAt }));
 fs.writeFileSync(path.join(outDir, 'watchlist.json'), JSON.stringify({ items: watchlist, generatedAt: meta.generatedAt }));
 fs.writeFileSync(path.join(outDir, 'digest.json'), JSON.stringify({ ...digest, generatedAt: meta.generatedAt }));
+fs.writeFileSync(path.join(outDir, 'crossword.json'), JSON.stringify(crossword));
 fs.writeFileSync(path.join(outDir, 'meta.json'), JSON.stringify(meta, null, 2));
 
 console.log(`✅ Static data written to ${outDir}`);
-console.log(`   stories=${stories.length} themes=${themes.length} watchlist=${watchlist.length} articles=${meta.articles}`);
+console.log(
+  `   stories=${stories.length} themes=${themes.length} watchlist=${watchlist.length} crossword=${crossword.wordCount} words articles=${meta.articles}`
+);
 
 await prisma.$disconnect();

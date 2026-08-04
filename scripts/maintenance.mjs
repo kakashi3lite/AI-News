@@ -3,10 +3,19 @@
 // Run: node --env-file=.env scripts/maintenance.mjs
 import prisma from '../lib/db.js';
 import { stripHtml } from '../lib/utils.js';
-import { seedWatchlist, relinkAllWatchlist } from '../lib/watchlist.js';
+import { seedWatchlist, relinkAllWatchlist, RETIRED_DEFAULTS } from '../lib/watchlist.js';
 import { extractThemesFromDb } from '../lib/themes.js';
+import { getDailyCrossword } from '../lib/crossword.js';
 
 await seedWatchlist();
+
+// Remove retired default watchlist items (old AI-tech defaults no longer tracked).
+if (RETIRED_DEFAULTS.length > 0) {
+  const removed = await prisma.watchlistItem.deleteMany({
+    where: { name: { in: RETIRED_DEFAULTS } },
+  });
+  console.log(`Retired watchlist defaults removed: ${removed.count}`);
+}
 
 // Re-decode titles/descriptions stored before the entity fix (&#8217; etc.).
 const articles = await prisma.article.findMany({ select: { id: true, title: true, description: true, author: true } });
@@ -30,5 +39,9 @@ console.log(`Themes refreshed: ${themes.length}`);
 for (const t of themes.slice(0, 10)) {
   console.log(`  ${t.name} (${t.articleCount}, vel ${t.velocity}, ${t.sentimentLabel})`);
 }
+
+// Verify the daily crossword builds from current news.
+const puzzle = await getDailyCrossword({ date: new Date().toISOString().slice(0, 10) });
+console.log(`Crossword: ${puzzle.wordCount} words, ${Object.keys(puzzle.cells).length} cells, clues=${puzzle.across.length + puzzle.down.length}`);
 
 await prisma.$disconnect();

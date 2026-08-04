@@ -88,6 +88,17 @@ export default function SignalView() {
         </div>
       ) : (
         <>
+          {/* Trust legend — explains what every badge means */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-gray-500 bg-white border border-gray-200 rounded-lg px-4 py-2.5">
+            <span className="font-semibold text-gray-700 uppercase tracking-wide text-[10px]">
+              How to read
+            </span>
+            <span><span className="text-green-700 font-medium">▲/▼ sentiment</span> — tone of the story</span>
+            <span><span className="font-medium">🛡 reliability</span> — outlet&apos;s accuracy grade</span>
+            <span><span className="text-rose-600 font-medium">impact</span> — estimated effect on global markets</span>
+            <span><span className="text-emerald-600 font-medium">verified/developing</span> — how many independent sources confirm it</span>
+          </div>
+
           {themes.length > 0 && (
             <section>
               <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
@@ -128,7 +139,7 @@ export default function SignalView() {
                 No stories match this theme yet.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {filtered.map((a) => (
                   <SignalCard key={a.id} article={a} />
                 ))}

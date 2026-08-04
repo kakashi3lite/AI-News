@@ -1,7 +1,7 @@
 import { TrendingUp } from 'lucide-react';
-import { SentimentBadge } from './badges';
+import { SentimentBadge, ImpactBadge } from './badges';
 
-// A clickable theme cluster pill with story count, velocity, and sentiment.
+// A clickable theme cluster pill with story count, velocity, sentiment, and impact.
 export default function ThemeCluster({ theme, active, onSelect }) {
   return (
     <button
@@ -16,12 +16,13 @@ export default function ThemeCluster({ theme, active, onSelect }) {
         <TrendingUp className={`w-4 h-4 ${active ? 'text-blue-600' : 'text-gray-400'}`} />
         <span className="font-semibold text-gray-900 capitalize truncate">{theme.name}</span>
       </div>
-      <div className="flex items-center gap-2 mt-1.5">
+      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
         <span className="text-xs text-gray-500">{theme.articleCount} stories</span>
         {theme.velocity > 0 && (
           <span className="text-xs font-medium text-green-600">+{theme.velocity}</span>
         )}
         <SentimentBadge label={theme.sentimentLabel} score={theme.sentimentScore} />
+        {theme.impactLabel && <ImpactBadge label={theme.impactLabel} score={theme.impactScore} />}
       </div>
     </button>
   );

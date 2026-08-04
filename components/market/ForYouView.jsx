@@ -7,7 +7,7 @@ import { fetchNews } from '../../lib/clientData';
 import SignalCard from './SignalCard';
 import { timeAgo } from './format';
 
-// Build a lightweight interest profile from the user's research.
+// Build a lightweight interest profile from the user's research + learned interests.
 function buildProfile(data) {
   const tagCount = {};
   for (const b of data.bookmarks || []) {
@@ -18,7 +18,8 @@ function buildProfile(data) {
   }
   const names = (data.watchlist || []).map((w) => w.name.toLowerCase());
   const keywords = (data.watchlist || []).flatMap((w) => w.keywords || []).map((k) => k.toLowerCase());
-  return { tagCount, names, keywords };
+  const interests = Object.entries(data.interests || {});
+  return { tagCount, names, keywords, interests };
 }
 
 function scoreStory(article, profile) {
@@ -41,6 +42,13 @@ function scoreStory(article, profile) {
   }
   for (const k of profile.keywords) {
     if (text.includes(k)) score += 1.5;
+  }
+  // Auto-mode: learned interest terms carry weight too.
+  for (const [term, weight] of profile.interests) {
+    if (text.includes(term)) {
+      score += 1.5 * Math.min(weight, 5);
+      if (reasons.length < 3 && term.length >= 3) reasons.push(term);
+    }
   }
   return { score, reasons };
 }
@@ -72,9 +80,23 @@ export default function ForYouView() {
     const scored = articles
       .filter((a) => !bookmarked.has(a.id))
       .map((a) => ({ ...a, ...scoreStory(a, profile) }));
-    scored.sort((a, b) => b.score - a.score || new Date(b.publishedAt) - new Date(a.publishedAt));
+    scored.sort(
+      (a, b) =>
+        b.score - a.score ||
+        (b.impactScore || 0) - (a.impactScore || 0) ||
+        new Date(b.publishedAt) - new Date(a.publishedAt)
+    );
     return scored.slice(0, 12);
   }, [articles, profile, data.bookmarks]);
+
+  const interests = useMemo(
+    () =>
+      Object.entries(data.interests || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([term, weight]) => ({ term, weight: Math.round(weight * 10) / 10 })),
+    [data.interests]
+  );
 
   const hasInterests =
     (data.bookmarks?.length || 0) + (data.watchlist?.length || 0) + (data.history?.length || 0) > 0;
@@ -137,10 +159,34 @@ export default function ForYouView() {
         </h2>
         <p className="text-sm text-gray-500 mt-0.5">
           {hasInterests
-            ? 'Ranked from your saved stories, watchlist, and reading history.'
-            : 'Save a few stories or add watchlist companies and this feed will learn your interests.'}
+            ? 'Ranked from your saved stories, watchlist, reading history — and your learned interests (auto-mode).'
+            : 'Save a few stories or add watchlist companies and this feed will learn your interests automatically.'}
         </p>
       </div>
+
+      {/* Auto-follow: learned interests */}
+      {interests.length > 0 && (
+        <section className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-600" /> Auto-following
+            </h3>
+            <span className="text-[11px] text-gray-400">learned from your activity</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {interests.map(({ term, weight }) => (
+              <span
+                key={term}
+                className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs"
+                title={`Interest strength ${weight}`}
+              >
+                <span className="font-medium text-gray-800">{term}</span>
+                <span className="text-indigo-500 text-[10px]">{weight.toFixed(1)}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       {recommended.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">

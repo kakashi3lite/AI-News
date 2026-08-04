@@ -12,7 +12,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className="font-sans antialiased bg-white text-gray-800 flex flex-col min-h-screen">
+      <body className="font-sans antialiased bg-gray-50 text-gray-800 flex flex-col min-h-screen text-[16px] leading-relaxed scroll-smooth">
         <header className="bg-white shadow-md">
           <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-900">Market Signal</h1>

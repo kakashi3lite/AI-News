@@ -13,6 +13,7 @@ import {
   Sparkles,
   LogIn,
   LogOut,
+  Grid3x3,
 } from 'lucide-react';
 import SignalView from '../components/market/SignalView';
 import WatchlistView from '../components/market/WatchlistView';
@@ -20,6 +21,7 @@ import StoriesView from '../components/market/StoriesView';
 import DigestView from '../components/market/DigestView';
 import ToolsView from '../components/market/ToolsView';
 import ForYouView from '../components/market/ForYouView';
+import CrosswordView from '../components/market/CrosswordView';
 import LoginModal from '../components/market/LoginModal';
 import { UserProvider, useUser } from '../contexts/UserContext';
 import { triggerIngest } from '../lib/clientData';
@@ -28,6 +30,7 @@ const NAV = [
   { id: 'foryou', label: 'For You', icon: Sparkles },
   { id: 'signal', label: 'Signal', icon: Activity },
   { id: 'watchlist', label: 'Watchlist', icon: Building2 },
+  { id: 'crossword', label: 'Crossword', icon: Grid3x3 },
   { id: 'stories', label: 'Stories', icon: LayoutList },
   { id: 'digest', label: 'Digest', icon: Mail },
   { id: 'tools', label: 'Tools', icon: Wand2 },
@@ -155,6 +158,7 @@ const MarketDashboard = () => {
             {activeView === 'foryou' && <ForYouView />}
             {activeView === 'signal' && <SignalView />}
             {activeView === 'watchlist' && <WatchlistView />}
+            {activeView === 'crossword' && <CrosswordView />}
             {activeView === 'stories' && <StoriesView />}
             {activeView === 'digest' && <DigestView />}
             {activeView === 'tools' && <ToolsView />}

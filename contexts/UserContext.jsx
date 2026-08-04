@@ -51,7 +51,15 @@ export function UserProvider({ children }) {
         return false;
       }
       const isB = data.bookmarks.some((b) => b.id === article.id);
-      setData(isB ? store.removeBookmark(user.email, article.id) : store.addBookmark(user.email, article));
+      const next = isB
+        ? store.removeBookmark(user.email, article.id)
+        : store.addBookmark(user.email, article);
+      setData(next);
+      if (!isB) {
+        // Auto-mode: learn from the bookmarked story.
+        store.addInterest(user.email, [...(article.tags || []), article.category, article.source?.name]);
+        setData(store.loadUserData(user.email));
+      }
       return true;
     },
     [user, data.bookmarks]
@@ -59,7 +67,10 @@ export function UserProvider({ children }) {
 
   const logReading = useCallback(
     (article) => {
-      if (user) store.addReading(user.email, article);
+      if (user) {
+        store.addReading(user.email, article);
+        store.addInterest(user.email, [...(article.tags || []), article.category, article.source?.name]);
+      }
     },
     [user]
   );
@@ -71,6 +82,9 @@ export function UserProvider({ children }) {
         return false;
       }
       setData(store.addWatchlistItem(user.email, item));
+      // Auto-mode: the watched company is a strong interest signal.
+      store.addInterest(user.email, [item.name, ...(item.keywords || [])]);
+      setData(store.loadUserData(user.email));
       return true;
     },
     [user]
