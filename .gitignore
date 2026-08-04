@@ -10,6 +10,9 @@ out/
 # Static build helper (temporary API move)
 .api-disabled/
 
+# Separate embedded repo (AI-News/ is its own git project — do not track here)
+AI-News/
+
 # Local environment variables
 .env.local
 .env.*.local
