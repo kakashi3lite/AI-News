@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDailyCrossword } from '../../../lib/crossword';
 
+export const dynamic = 'force-dynamic';
+
 // Daily news crossword. Deterministic per date (cached in-memory), so the same
 // puzzle is served all day and a new one appears the next day.
 const cache = new Map();

@@ -4,6 +4,8 @@ import { getWatchlistWithStories } from '../../../lib/signal';
 import { getWatchlistItems, seedWatchlist } from '../../../lib/watchlist';
 import prisma from '../../../lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const AddItemSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(60, 'Name too long'),
   aliases: z.array(z.string().trim().min(1).max(40)).max(20).default([]),

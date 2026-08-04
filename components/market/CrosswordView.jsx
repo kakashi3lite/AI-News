@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, AlertCircle, Check, Eye, Eraser, Sparkles } from 'lucide-react';
+import { Loader2, AlertCircle, Check, Eye, Eraser, Sparkles, Flame, LogIn } from 'lucide-react';
 import { fetchCrossword } from '../../lib/clientData';
+import { useUser } from '../../contexts/UserContext';
 
 // Daily news crossword — solved in-browser, generated from today's real headlines.
 export default function CrosswordView() {
+  const { user, setLoginOpen, recordCrosswordSolved, crosswordStatus } = useUser();
   const [puzzle, setPuzzle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -13,7 +15,10 @@ export default function CrosswordView() {
   const [selected, setSelected] = useState(null);
   const [wrong, setWrong] = useState({});
   const [revealed, setRevealed] = useState(false);
+  const [justSolved, setJustSolved] = useState(false);
   const boardRef = useRef(null);
+  const xwStatus = crosswordStatus();
+  const solvedToday = justSolved || xwStatus.solvedToday;
 
   useEffect(() => {
     (async () => {
@@ -112,11 +117,17 @@ export default function CrosswordView() {
   const checkAnswers = () => {
     if (!puzzle) return;
     const bad = {};
+    let correct = 0;
     for (const [k, answer] of Object.entries(puzzle.cells)) {
-      if ((entries[k] || '').toUpperCase() !== answer) bad[k] = true;
+      if ((entries[k] || '').toUpperCase() === answer) correct += 1;
+      else bad[k] = true;
     }
     setWrong(bad);
     setRevealed(false);
+    if (correct === Object.keys(puzzle.cells).length) {
+      setJustSolved(true);
+      recordCrosswordSolved();
+    }
   };
 
   const reveal = () => {
@@ -126,6 +137,8 @@ export default function CrosswordView() {
     setEntries(filled);
     setWrong({});
     setRevealed(true);
+    setJustSolved(true);
+    recordCrosswordSolved();
   };
 
   const clear = () => {
@@ -174,10 +187,31 @@ export default function CrosswordView() {
             solve.
           </p>
         </div>
-        <div className="text-sm text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-1.5">
-          {solvedCount}/{totalCells} solved
+        <div className="flex items-center gap-2">
+          {xwStatus.streak > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700" title="Consecutive days solved">
+              <Flame className="w-3.5 h-3.5" /> {xwStatus.streak}-day streak
+            </span>
+          )}
+          <span className="text-sm text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-1.5">
+            {solvedCount}/{totalCells} solved{solvedToday ? ' · ✓ today' : ''}
+          </span>
         </div>
       </div>
+
+      {revealed && !user && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-blue-800">
+            Nice work! Create a free profile to <b>save your streak</b> and get a personalized brief.
+          </p>
+          <button
+            onClick={() => setLoginOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 shrink-0"
+          >
+            <LogIn className="w-4 h-4" /> Sign in
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Board */}

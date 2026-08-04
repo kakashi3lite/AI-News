@@ -14,6 +14,7 @@ import {
   LogIn,
   LogOut,
   Grid3x3,
+  Sunrise,
 } from 'lucide-react';
 import SignalView from '../components/market/SignalView';
 import WatchlistView from '../components/market/WatchlistView';
@@ -22,11 +23,14 @@ import DigestView from '../components/market/DigestView';
 import ToolsView from '../components/market/ToolsView';
 import ForYouView from '../components/market/ForYouView';
 import CrosswordView from '../components/market/CrosswordView';
+import TodayView from '../components/market/TodayView';
+import Onboarding from '../components/market/Onboarding';
 import LoginModal from '../components/market/LoginModal';
 import { UserProvider, useUser } from '../contexts/UserContext';
 import { triggerIngest } from '../lib/clientData';
 
 const NAV = [
+  { id: 'today', label: 'Today', icon: Sunrise },
   { id: 'foryou', label: 'For You', icon: Sparkles },
   { id: 'signal', label: 'Signal', icon: Activity },
   { id: 'watchlist', label: 'Watchlist', icon: Building2 },
@@ -125,7 +129,7 @@ function Header({ activeView, setActiveView, ingesting, onIngest, lastResult }) 
 // Works in two modes: server (API + DB) and static (pre-built JSON snapshots).
 // Includes a local user profile for saved research + personalized recommendations.
 const MarketDashboard = () => {
-  const [activeView, setActiveView] = useState('signal');
+  const [activeView, setActiveView] = useState('today');
   const [ingesting, setIngesting] = useState(false);
   const [lastResult, setLastResult] = useState(null);
 
@@ -155,6 +159,7 @@ const MarketDashboard = () => {
           />
 
           <div className="mb-10">
+            {activeView === 'today' && <TodayView onOpenCrossword={() => setActiveView('crossword')} />}
             {activeView === 'foryou' && <ForYouView />}
             {activeView === 'signal' && <SignalView />}
             {activeView === 'watchlist' && <WatchlistView />}
@@ -165,6 +170,7 @@ const MarketDashboard = () => {
           </div>
         </div>
         <LoginModal />
+        <Onboarding />
       </main>
     </UserProvider>
   );

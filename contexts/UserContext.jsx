@@ -97,6 +97,22 @@ export function UserProvider({ children }) {
     [user]
   );
 
+  // Crossword habit: streaks work for guests too (device-scoped).
+  const recordCrosswordSolved = useCallback(
+    (date) => {
+      const email = user?.email || 'guest';
+      const next = store.recordCrosswordSolved(email, date);
+      if (user) setData(store.loadUserData(user.email));
+      return next;
+    },
+    [user]
+  );
+
+  const crosswordStatus = useCallback(
+    () => store.crosswordStatus(user?.email || 'guest'),
+    [user]
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -110,8 +126,22 @@ export function UserProvider({ children }) {
       removeFromWatchlist,
       handleLogin,
       handleLogout,
+      recordCrosswordSolved,
+      crosswordStatus,
     }),
-    [user, data, loginOpen, toggleBookmark, logReading, addToWatchlist, removeFromWatchlist, handleLogin, handleLogout]
+    [
+      user,
+      data,
+      loginOpen,
+      toggleBookmark,
+      logReading,
+      addToWatchlist,
+      removeFromWatchlist,
+      handleLogin,
+      handleLogout,
+      recordCrosswordSolved,
+      crosswordStatus,
+    ]
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

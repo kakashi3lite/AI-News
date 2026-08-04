@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getDigest } from '../../../lib/signal';
 import { ensureData } from '../../../lib/ingest';
 
+export const dynamic = 'force-dynamic';
+
 // Daily digest: today's top themes, top stories, and watchlist pulse.
 export async function GET() {
   try {

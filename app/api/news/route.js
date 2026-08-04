@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getTopStories } from '../../../lib/signal';
 import { ensureData } from '../../../lib/ingest';
 
+export const dynamic = 'force-dynamic';
+
 // DB-backed news feed for the Market Signal dashboard.
 // Auto-ingests real RSS data on first load so the dashboard is never empty.
 export async function GET(req) {

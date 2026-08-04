@@ -3,6 +3,8 @@ import { getThemesWithStories } from '../../../lib/signal';
 import { extractThemesFromDb } from '../../../lib/themes';
 import prisma from '../../../lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // Trending theme clusters with representative stories.
 // Re-extracts when stale (>1h) so the dashboard reflects current data.
 export async function GET(req) {
