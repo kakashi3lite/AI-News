@@ -4,35 +4,46 @@
 - [x] Real RSS ingestion → SQLite (Prisma), no API keys required
 - [x] Dedup, sentiment scoring, source reliability
 - [x] Watchlist + theme extraction + daily digest
-- [x] Dashboard UI: Signal / Watchlist / Stories / Digest / Tools
-- [x] Build, lint, and 22 unit tests green
+- [x] Dashboard UI: Signal / Watchlist / Stories / Digest / Tools / **Crossword** / For You
+- [x] Impact + verification engine (corroboration-based, market-impact score, outlooks)
+- [x] Auto-mode: learned interest weights + auto-follow chips + impact-aware recommendations
+- [x] Daily news crossword (free, generated from real headlines, 10 words/day)
+- [x] Local login (email+PIN vault) — bookmarks, personal watchlist, history, For You
+- [x] Worksy competitive watchlist seed (HR-tech/employee-experience market)
+- [x] Email digest (nodemailer + /api/cron/digest, SMTP env-driven)
+- [x] Vercel cron config (vercel.json) + CRON_SECRET-guarded endpoints
+- [x] Cloudflare D1 package: wrangler.toml, d1-migration.sql, DEPLOY_CLOUDFLARE.md
+- [x] Portable hashing (FNV-1a, no node:crypto) — ready for Workers/edge
+- [x] 35 unit tests, zero ESLint warnings, server + static builds green
+- [x] Deployed live: https://kakashi3lite.github.io/AI-News/
 
 ## Next (recommended order)
-1. **Scheduled ingestion for production** — wire Vercel Cron to `GET /api/cron/ingest` with `CRON_SECRET` (or `node --env-file=.env scripts/test-ingest.mjs` in a local cron).
-2. **Custom watchlist seed** — replace the AI/tech defaults in `lib/watchlist.js` with your real competitors, or add them via the Watchlist UI.
-3. **Email digest delivery** — SMTP env vars are already defined; add a mailer step to the digest endpoint.
-4. **Historical charts** — per-company / per-theme sentiment over time (data is already persisted; needs a chart component).
-5. **Alerting** — watchlist keyword hits above a threshold → webhook/email trigger.
-6. **Postgres migration** — the Prisma schema is portable; switch provider + `DATABASE_URL`.
-7. **Deployment config** — pick a host (Vercel recommended); `netlify.toml` is currently mismatched with the build output.
+1. **Deploy server mode to Cloudflare** — follow `docs/DEPLOY_CLOUDFLARE.md` (D1 + Workers + cron) for true real-time ingestion + email digest from the edge.
+2. **Email digest credentials** — add `SMTP_*` + `DIGEST_EMAILS` env vars to activate delivery (code + cron are ready).
+3. **Historical charts** — per-company / per-theme sentiment + impact over time (data is persisted; needs a chart component).
+4. **Alerting** — watchlist/impact thresholds → webhook or email trigger.
+5. **PWA** — offline + installable (nice for the crossword habit).
 
 ## Verification commands
 ```bash
 npm run dev                              # run the dashboard
+npm run test:unit                        # 35 unit tests
 node --env-file=.env scripts/test-ingest.mjs   # full pipeline smoke test
-node --env-file=.env scripts/maintenance.mjs   # re-decode/relink/refresh themes
-npm run test:unit                        # unit tests (Node test runner)
-npm run build                            # production build
+node --env-file=.env scripts/maintenance.mjs   # retire/relink/themes/crossword
+npm run build                            # server-mode production build
+bash scripts/build-static.sh /AI-News    # static export for GitHub Pages
 ```
 
 ## API surface (real data)
 ```
-GET  /api/news          # top stories (search/category/tag/watchlist filters)
-GET  /api/themes        # trending theme clusters (+stories)
+GET  /api/news          # top stories (impact + verification enriched)
+GET  /api/themes        # theme clusters (+impact, +stories)
 GET  /api/watchlist     # tracked companies + matched stories (POST to add)
 GET  /api/digest        # today's digest
-POST /api/ingest        # manual refresh (ingest + relink + themes)
+GET  /api/crossword     # daily news crossword (date param)
+POST /api/ingest        # manual refresh (rate-limited)
 GET  /api/cron/ingest   # scheduled ingestion (Bearer: CRON_SECRET)
+GET  /api/cron/digest   # scheduled digest email (Bearer: CRON_SECRET)
 ```
 
 **Next Review:** Schedule regular project reviews
