@@ -1,110 +1,38 @@
-# AI News Dashboard - Next Steps
+# Market Signal — Next Steps
 
-## Project Status
+## Working Prototype (done ✅)
+- [x] Real RSS ingestion → SQLite (Prisma), no API keys required
+- [x] Dedup, sentiment scoring, source reliability
+- [x] Watchlist + theme extraction + daily digest
+- [x] Dashboard UI: Signal / Watchlist / Stories / Digest / Tools
+- [x] Build, lint, and 22 unit tests green
 
-✅ **Completed Cleanup Tasks:**
-- Removed all persona declarations and author attributions
-- Eliminated duplicate API routes between `app/api` and `pages/api` directories
-- Neutralized AI system messages and character references
-- Updated documentation and configuration files
-- Committed all changes to Git
+## Next (recommended order)
+1. **Scheduled ingestion for production** — wire Vercel Cron to `GET /api/cron/ingest` with `CRON_SECRET` (or `node --env-file=.env scripts/test-ingest.mjs` in a local cron).
+2. **Custom watchlist seed** — replace the AI/tech defaults in `lib/watchlist.js` with your real competitors, or add them via the Watchlist UI.
+3. **Email digest delivery** — SMTP env vars are already defined; add a mailer step to the digest endpoint.
+4. **Historical charts** — per-company / per-theme sentiment over time (data is already persisted; needs a chart component).
+5. **Alerting** — watchlist keyword hits above a threshold → webhook/email trigger.
+6. **Postgres migration** — the Prisma schema is portable; switch provider + `DATABASE_URL`.
+7. **Deployment config** — pick a host (Vercel recommended); `netlify.toml` is currently mismatched with the build output.
 
-## Immediate Next Steps
-
-### 1. Code Quality & Testing
-- [ ] Run comprehensive test suite: `npm test`
-- [ ] Fix any linting issues: `npm run lint:fix`
-- [ ] Format code consistently: `npm run format`
-- [ ] Run security audit: `npm audit fix`
-- [ ] Update dependencies: `npm update`
-
-### 2. Documentation Updates
-- [ ] Review and update API documentation
-- [ ] Create/update deployment guides
-- [ ] Document environment variables and configuration
-- [ ] Add contributing guidelines
-- [ ] Update README with current features and setup instructions
-
-### 3. Development Environment
-- [ ] Verify all environment variables are properly configured
-- [ ] Test local development server: `npm run dev`
-- [ ] Validate API endpoints are working correctly
-- [ ] Check database connections and migrations
-- [ ] Test news ingestion and summarization features
-
-### 4. Production Readiness
-- [ ] Review and update deployment configurations
-- [ ] Set up proper logging and monitoring
-- [ ] Configure error handling and alerting
-- [ ] Implement proper backup strategies
-- [ ] Security review and hardening
-
-### 5. Feature Development
-- [ ] Prioritize feature backlog
-- [ ] Plan next development sprint
-- [ ] Set up CI/CD pipelines
-- [ ] Configure automated testing
-- [ ] Plan performance optimization
-
-## Git Repository Status
-
-**Current State:**
-- Working tree is clean
-- All changes committed locally
-- Branch is 3 commits ahead of origin/main
-- Ready for push to remote repository
-
-**Recommended Git Actions:**
+## Verification commands
 ```bash
-# Push local commits to remote
-git push origin main
-
-# Create a new feature branch for next development
-git checkout -b feature/next-development
+npm run dev                              # run the dashboard
+node --env-file=.env scripts/test-ingest.mjs   # full pipeline smoke test
+node --env-file=.env scripts/maintenance.mjs   # re-decode/relink/refresh themes
+npm run test:unit                        # unit tests (Node test runner)
+npm run build                            # production build
 ```
 
-## Architecture Overview
+## API surface (real data)
+```
+GET  /api/news          # top stories (search/category/tag/watchlist filters)
+GET  /api/themes        # trending theme clusters (+stories)
+GET  /api/watchlist     # tracked companies + matched stories (POST to add)
+GET  /api/digest        # today's digest
+POST /api/ingest        # manual refresh (ingest + relink + themes)
+GET  /api/cron/ingest   # scheduled ingestion (Bearer: CRON_SECRET)
+```
 
-The project now has a clean, professional structure:
-
-- **Frontend:** Next.js with React components
-- **Backend:** API routes in `app/api` directory (Next.js 13+ App Router)
-- **News Processing:** Ingestion and summarization modules
-- **MLOps:** Machine learning operations and monitoring
-- **QA:** Quality assurance and testing infrastructure
-- **Deployment:** Automated deployment and orchestration tools
-
-## Key Features
-
-1. **News Ingestion & Processing**
-   - Real-time news feed aggregation
-   - AI-powered summarization
-   - Theme and trend extraction
-
-2. **Social Features**
-   - User profiles and groups
-   - Content sharing and recommendations
-   - Social analytics
-
-3. **Analytics & Monitoring**
-   - Performance metrics
-   - User engagement tracking
-   - System health monitoring
-
-4. **MLOps Infrastructure**
-   - Model training and deployment
-   - A/B testing capabilities
-   - Automated quality assurance
-
-## Contact & Support
-
-For questions or support:
-- **Email:** support@ai-news-dashboard.com
-- **Issues:** GitHub Issues
-- **Documentation:** Project README and wiki
-
----
-
-**Last Updated:** $(date)
-**Status:** Ready for development
 **Next Review:** Schedule regular project reviews

@@ -1,26 +1,34 @@
 import { NextResponse } from 'next/server';
-import { fetchAllNews } from '../../../lib/newsFetcher';
+import { getTopStories } from '../../../lib/signal';
+import { ensureData } from '../../../lib/ingest';
 
-// API route to aggregate news from global sources and support search, category, and tag
+// DB-backed news feed for the Market Signal dashboard.
+// Auto-ingests real RSS data on first load so the dashboard is never empty.
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get('q') || '';
-  const category = searchParams.get('category') || ''; // e.g., 'technology', 'business'
+  const category = searchParams.get('category') || '';
   const tag = searchParams.get('tag') || '';
-
-  console.log(`[/api/news] Received request - Query: '${query}', Category: '${category}', Tag: '${tag}'`);
+  const watchlistId = searchParams.get('watchlist') || '';
+  const limit = Math.min(Number(searchParams.get('limit')) || 20, 60);
 
   try {
-    // Fetch news from all sources
-    const { articles, error } = await fetchAllNews({ query, category, tag });
-    if (error) {
-      console.error('[/api/news] Error from fetchAllNews:', error);
-      return NextResponse.json({ error }, { status: 500 });
-    }
-    console.log(`[/api/news] Sending response with ${articles.length} articles.`);
-    return NextResponse.json({ articles, totalResults: articles.length });
+    await ensureData();
+    const articles = await getTopStories({
+      query,
+      category,
+      tag,
+      watchlistId,
+      limit,
+      sinceHours: 72,
+    });
+    return NextResponse.json({
+      articles,
+      totalResults: articles.length,
+      generatedAt: new Date().toISOString(),
+    });
   } catch (error) {
-    console.error('[/api/news] Unexpected error:', error);
+    console.error('[/api/news] error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

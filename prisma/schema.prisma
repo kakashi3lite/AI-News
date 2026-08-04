@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A curated news source (RSS feed or API) with a reliability score
+// used to weight how much the dashboard trusts its reporting.
+model Source {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  url              String    @unique
+  type             String    @default("rss") // rss | api | manual
+  category         String?
+  reliabilityScore Float     @default(0.7)
+  isActive         Boolean   @default(true)
+  lastFetchedAt    DateTime?
+  createdAt        DateTime  @default(now())
+  articles         Article[]
+}
+
+// A normalized, deduplicated news story. urlHash is the unique
+// identity key so re-ingestion never creates duplicates.
+model Article {
+  id               Int       @id @default(autoincrement())
+  urlHash          String    @unique
+  url              String
+  title            String
+  description      String?
+  content          String?
+  imageUrl         String?
+  author           String?
+  publishedAt      DateTime
+  fetchedAt        DateTime  @default(now())
+  category         String?
+  tags             String    @default("[]") // JSON array of tags
+  sentimentScore   Float?
+  sentimentLabel   String? // positive | negative | neutral
+  reliabilityScore Float     @default(0.7)
+  wordCount        Int?
+  sourceId         Int?
+  source           Source?   @relation(fields: [sourceId], references: [id])
+  summaries        ArticleSummary[]
+  themeLinks       ThemeArticle[]
+  watchlistLinks   WatchlistArticle[]
+
+  @@index([publishedAt])
+  @@index([category])
+}
+
+// Cached AI/extractive summary per article + summary type.
+model ArticleSummary {
+  id          Int      @id @default(autoincrement())
+  articleId   Int
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  summaryType String   @default("standard") // brief | standard | detailed | executive
+  summaryText String
+  modelUsed   String
+  confidence  Float    @default(0.5)
+  createdAt   DateTime @default(now())
+
+  @@unique([articleId, summaryType])
+}
+
+// A detected theme/trend cluster with aggregate sentiment and velocity.
+model Theme {
+  id             Int            @id @default(autoincrement())
+  name           String
+  slug           String         @unique
+  category       String?
+  keywords       String         @default("[]") // JSON array
+  sentimentScore Float?
+  sentimentLabel String?
+  velocity       Int            @default(0) // delta in article count vs previous window
+  articleCount   Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  articles       ThemeArticle[]
+}
+
+// Join: which articles belong to which theme (with match score).
+model ThemeArticle {
+  themeId   Int
+  articleId Int
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  theme     Theme   @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  score     Float   @default(0)
+  createdAt DateTime @default(now())
+
+  @@id([themeId, articleId])
+}
+
+// A company / entity being tracked in the market-intel watchlist.
+model WatchlistItem {
+  id           Int                @id @default(autoincrement())
+  name         String             @unique
+  aliases      String             @default("[]") // JSON array of alt names (e.g. "Alphabet")
+  keywords     String             @default("[]") // JSON array of product/theme keywords
+  feeds        String             @default("[]") // JSON array of extra RSS feeds
+  category     String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  articleLinks WatchlistArticle[]
+}
+
+// Join: which articles mention which watchlist item (with match score + matched terms).
+model WatchlistArticle {
+  watchlistItemId Int
+  articleId       Int
+  article         Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  watchlistItem   WatchlistItem @relation(fields: [watchlistItemId], references: [id], onDelete: Cascade)
+  matchScore      Float         @default(0)
+  matchedOn       String        @default("[]") // JSON array of terms that matched
+  createdAt       DateTime      @default(now())
+
+  @@id([watchlistItemId, articleId])
+}

@@ -1,114 +1,39 @@
-# Project Status
-
-## Overview
-
-AI News Dashboard is a modern news aggregation and analysis platform with AI-powered features.
+# Market Signal — Project Status
 
 ## Current State
+- **Status**: Working prototype (MVP) — functional end-to-end
+- **Last Updated**: 2026-08-05
+- **Focus**: Competitive / market intelligence dashboard with accurate, real data
 
-- **Status**: Active development
-- **Version**: 1.0.0
-- **Last Updated**: Recent documentation cleanup
+## What Works (Verified)
+- Real RSS ingestion (13 curated feeds, no API keys required) → SQLite via Prisma
+- Dedup across runs and within batch (URL hash + title fingerprint)
+- Sentiment scoring (offline lexicon) + source reliability scores on every story
+- Extractive summaries (offline) with optional OpenAI enhancement (graceful fallback)
+- Company watchlist with alias/keyword matching + match attribution
+- Theme/trend extraction with velocity + aggregate sentiment
+- Dashboard views: Today's Signal, Watchlist, Stories (search/filter), Daily Digest, Tools (YouTube)
+- Cron endpoint `/api/cron/ingest` for scheduled ingestion
+- `npm run build` ✓ · ESLint ✓ · 22 unit tests ✓
 
-## Technology Stack
+## Accuracy Guarantees
+- Every story shows: source, reliability %, sentiment label, publish time
+- Dedup verified (re-ingest adds 0 duplicates)
+- Watchlist false-positive regression tests
+- AI failures never break the pipeline (fall back to extractive)
 
-- **Frontend**: Next.js 14, React, Tailwind CSS
-- **Backend**: Node.js API routes
-- **AI/ML**: OpenAI integration
-- **Deployment**: Docker, Kubernetes
+## Cut (documented out of scope)
+- Social features, A/B experiments, jobs/monitoring mock APIs, dead overlays
+- Python MLOps/DeployX suite (unrelated to app runtime)
+- Auth (single-user demo pattern)
 
-## Key Features
+## Verified Metrics
+- Sources: 13/13 parsing, 0 errors on clean runs
+- Articles: ~270 stored; re-ingest inserts only new stories
+- Watchlist: 8 seeded companies with accurate attribution
+- Build: exit 0 · Lint: exit 0 · Tests: 22/22 pass
 
-- News ingestion and summarization
-- AI-powered analysis
-- Social features
-- Analytics dashboard
-- MLOps infrastructure
-
-## Repository Status
-
-- **Branch**: main
-- **Status**: Clean
-- **Documentation**: Simplified and updated
-
-### Code Quality
-- ✅ No persona declarations or character references
-- ✅ Consistent naming conventions
-- ✅ Professional documentation
-- ⚠️ Pre-commit hooks need attention (linting/formatting)
-
-### Architecture
-- ✅ Modern Next.js 13+ App Router structure
-- ✅ Clean API route organization
-- ✅ Modular component architecture
-- ✅ Comprehensive MLOps infrastructure
-
-### Documentation
-- ✅ Updated README and project docs
-- ✅ Clean configuration files
-- ✅ Professional contact information
-- ✅ Next steps documentation created
-
-## Immediate Action Items
-
-### High Priority
-1. **Push commits to remote repository**
-2. **Run and fix linting issues** (`npm run lint:fix`)
-3. **Execute test suite** (`npm test`)
-4. **Verify local development environment** (`npm run dev`)
-
-### Medium Priority
-1. **Update dependencies** (`npm update`)
-2. **Security audit** (`npm audit fix`)
-3. **Review and update API documentation**
-4. **Configure environment variables**
-
-### Low Priority
-1. **Performance optimization review**
-2. **CI/CD pipeline setup**
-3. **Deployment strategy refinement**
-4. **Feature backlog prioritization**
-
-## Risk Assessment
-
-### Low Risk
-- Code cleanup completed successfully
-- No breaking changes introduced
-- Git history preserved
-- Professional structure maintained
-
-### Potential Issues
-- Pre-commit hooks may need configuration
-- Some dependencies might need updates
-- Environment variables may need verification
-- API endpoints should be tested
-
-## Recommendations
-
-1. **Immediate Development:**
-   - Set up proper development environment
-   - Configure linting and formatting tools
-   - Establish testing workflows
-
-2. **Team Collaboration:**
-   - Create contributing guidelines
-   - Set up code review processes
-   - Establish branching strategy
-
-3. **Production Readiness:**
-   - Configure monitoring and logging
-   - Set up automated deployments
-   - Implement security best practices
-
-## Conclusion
-
-The AI News Dashboard project is now in excellent condition for professional development. The codebase is clean, well-structured, and free of any unprofessional elements. The comprehensive MLOps infrastructure and modern architecture provide a solid foundation for scaling and future development.
-
-**Status:** ✅ Ready for Development
-**Confidence Level:** High
-**Next Review:** After initial development sprint
-
----
-
-*Report generated: $(date)*
-*Project maintained by: AI News Dashboard Team*
+## Known Limitations (prototype)
+- Theme extraction can surface borderline noise terms
+- Watchlist defaults re-sync on ingest (UI edits to default items are overwritten)
+- OpenAI summarization may hit rate limits (falls back to extractive)

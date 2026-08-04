@@ -1,63 +1,43 @@
-# AI News Dashboard - Automated Job Scheduler Configuration
-# Defines scheduled tasks for news ingestion, theme extraction, and analytics
+# Market Signal - Scheduled Job Configuration
+# The working prototype schedules ingestion via API routes (Vercel Cron):
+#   GET /api/cron/ingest  → full pipeline (RSS fetch → dedup → persist →
+#                           watchlist link → summarize → themes)
+# For local development, trigger manually from the dashboard ("Refresh data")
+# or run: node --env-file=.env scripts/test-ingest.mjs
 
 version: "1.0"
 scheduler:
-  name: "AI News Dashboard Analytics Scheduler"
+  name: "Market Signal Dashboard"
   timezone: "UTC"
-  max_concurrent_jobs: 5
-  retry_policy:
-    max_retries: 3
-    retry_delay: "5m"
-    exponential_backoff: true
 
 # Job Definitions
 jobs:
-  # Hourly Theme Extraction (Main Job)
-  theme_extraction:
-    name: "Hourly Top Themes Extraction"
-    description: "Analyze top 100 articles every hour to extract trending themes and sentiment patterns"
-    schedule: "0 * * * *"  # Every hour at minute 0
+  # Production: Vercel Cron (every 30 minutes)
+  market_signal_ingest:
+    name: "Market Signal Ingestion + Theme Refresh"
+    description: "Ingest RSS feeds, dedup, link watchlist, summarize, extract themes"
+    schedule: "*/30 * * * *"
     enabled: true
     priority: "high"
-    timeout: "15m"
-    
+    endpoint: "/api/cron/ingest"
+    auth:
+      type: "bearer"
+      env: "CRON_SECRET"
+    steps:
+      - "ingestAll()  → fetch RSS → dedup → persist (SQLite)"
+      - "relinkAllWatchlist() → correct watchlist attribution"
+      - "extractThemesFromDb() → refresh theme clusters + velocity"
+
+  # Local/CLI runner (development only)
+  local_ingest:
+    name: "Local ingestion runner"
+    description: "node --env-file=.env scripts/test-ingest.mjs"
+    schedule: "*/30 * * * *"
+    enabled: false
     command:
       type: "node"
-      script: "analytics/themes.js"
-      args:
-        - "--mode=scheduled"
-        - "--max-articles=100"
-        - "--output-dir=./analytics/output"
-    
-    dependencies:
-      - "news_ingestion"
-    
-    notifications:
-      on_success:
-        - type: "webhook"
-          url: "${WEBHOOK_URL}/theme-extraction-success"
-      on_failure:
-        - type: "email"
-          recipients: ["admin@ai-news-dashboard.com"]
-        - type: "webhook"
-          url: "${WEBHOOK_URL}/theme-extraction-failure"
-    
-    metrics:
-      - name: "themes_extracted"
-        type: "gauge"
-      - name: "processing_time_ms"
-        type: "histogram"
-      - name: "articles_processed"
-        type: "counter"
+      script: "scripts/test-ingest.mjs"
 
-  # News Ingestion (Every 30 minutes)
-  news_ingestion:
-    name: "News Articles Ingestion"
-    description: "Fetch and process news articles from RSS feeds and APIs"
-    schedule: "*/30 * * * *"  # Every 30 minutes
-    enabled: true
-    priority: "medium"
     timeout: "10m"
     
     command:

@@ -1,298 +1,143 @@
-# AI News Dashboard
+# Market Signal — Competitive Intelligence Dashboard
 
-**Smart news aggregation platform with AI-powered analysis and social features**
+A working competitive-intelligence web app: real-time market news, source-graded and
+sentiment-tagged, with company watchlists, a personalized "For You" feed, and a daily
+digest. Built on Next.js 14, SQLite (Prisma), and curated RSS feeds — **no API keys
+required** for the core experience.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ai-news-dashboard/releases)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.0.4-black.svg)](https://nextjs.org/)
+## Why it's accurate
 
----
+- **Real data, always** — 13 curated RSS feeds (WSJ, Bloomberg, FT, BBC, NPR, Guardian, CNN, The Verge, TechCrunch, Hacker News, Google News) ingested with no keys.
+- **Dedup by design** — stable URL hashes + title fingerprints collapse the same story across feeds and runs.
+- **Source reliability** — every story carries its outlet's reliability score.
+- **Offline sentiment** — deterministic lexicon scoring (positive/negative/neutral) on every story.
+- **Match attribution** — watchlist stories show *why* they matched (the alias/keyword that fired).
+- **Graceful AI** — extractive summaries always work; OpenAI enhancement is opt-in and never breaks the pipeline.
 
-## What is AI News Dashboard?
+## Sign in & personalization
 
-A modern news platform that uses AI to summarize articles, analyze content, and provide personalized recommendations. Built for journalists, researchers, and news enthusiasts who want intelligent news consumption.
+Create a local profile (email + PIN) to keep your **research on this device**:
+- 🔖 **Bookmark stories** — build a saved-research library
+- 📌 **Personal watchlist** — track any company, not just the defaults
+- ⭐ **"For You" feed** — recommendations ranked from your saved stories, watchlist, and reading history
+- 🕒 **Recently read** — your research trail
 
-### Key Features
+The profile is a local vault (device-scoped), so it works on fully static hosting.
+PINs are hashed with WebCrypto (SHA-256 + salt); nothing is stored in plaintext.
 
-- 🤖 **AI Summarization** - Get concise summaries of any news article
-- 🔍 **Smart Search** - Context-aware search with voice support
-- 📊 **Content Analysis** - Sentiment analysis and topic categorization
-- 👥 **Social Features** - Comments, sharing, and community discussions
-- 📱 **Responsive Design** - Works perfectly on all devices
-- 🔒 **Privacy First** - GDPR compliant with secure authentication
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+ 
-- PostgreSQL database
-- Git
-
-### Installation
+## Quick Start (full app with live API + DB)
 
 ```bash
-# Clone and setup
-git clone https://github.com/your-username/ai-news-dashboard.git
-cd ai-news-dashboard
 npm install
-
-# Setup API keys securely
-npm run setup:keys
-
-# Setup database
-npm run db:migrate
-npm run db:seed
-
-# Start development server
-npm run dev
+npx prisma migrate dev --name init   # creates SQLite DB (prisma/dev.db)
+npm run dev                          # → http://localhost:3000/dashboard
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the app.
+First visit auto-ingests real RSS data. Use **Refresh data** to re-ingest
+(fetch → dedup → watchlist link → summarize → themes).
 
-### Environment Variables
+### Optional AI summaries
+Set `OPENAI_API_KEY` in `.env.local` for abstractive summaries on top stories
+(falls back to extractive on failure/rate-limit).
 
-Create `.env.local` with these required variables:
+## Dashboard
 
-```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/ai_news_dashboard"
+| View | What it does |
+| --- | --- |
+| **For You** | Personalized feed from your saved stories, watchlist, and history (after login) |
+| **Signal** | Trending themes + top stories ranked by recency, reliability, sentiment |
+| **Watchlist** | Tracked companies with matched stories + match reasons |
+| **Stories** | Search, category tabs, tag chips over the full feed |
+| **Digest** | One-scroll daily summary: theme pulse, watchlist pulse, top stories |
+| **Tools** | YouTube summarizer (earnings calls / product launches) |
 
-# Authentication
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key"
+## Deploy to GitHub Pages (static)
 
-# AI Services (Optional - uses mock data if not provided)
-OPENAI_API_KEY="your-openai-key"
-
-# News APIs (Optional - uses mock data if not provided)
-NEWS_API_KEY="your-newsapi-key"
-GUARDIAN_API_KEY="your-guardian-key"
-```
-
----
-
-## Technology Stack
-
-**Frontend**
-- Next.js 14 with App Router
-- React 18 with TypeScript
-- Tailwind CSS for styling
-- Framer Motion for animations
-
-**Backend**
-- Next.js API routes
-- Prisma ORM with PostgreSQL
-- NextAuth.js for authentication
-
-**AI & Analytics**
-- OpenAI for summarization
-- Custom sentiment analysis
-- Vercel Analytics
-- Sentry for error tracking
-
----
-
-## Project Structure
-
-```
-ai-news-dashboard/
-├── app/                 # Next.js App Router pages
-├── components/          # React components
-│   ├── ui/             # Base UI components
-│   ├── news/           # News-specific components
-│   └── social/         # Social features
-├── lib/                # Utility libraries
-│   ├── ai/             # AI processing
-│   ├── news/           # News aggregation
-│   └── utils/          # Helper functions
-├── prisma/             # Database schema
-├── public/             # Static assets
-└── tests/              # Test files
-```
-
----
-
-## 🔐 Security & API Management
-
-The AI News Dashboard includes a comprehensive **SecureKeyAgent** system for managing API keys securely:
-
-### Quick Setup
-```bash
-# Interactive API key setup (recommended)
-npm run setup:keys
-
-# Windows PowerShell version
-npm run setup:keys:windows
-
-# Validate existing keys
-npm run validate:keys
-```
-
-### Supported APIs
-- **OpenAI**: GPT models and embeddings
-- **Google AI**: Gemini Pro integration
-- **NewsAPI**: News data aggregation
-- **YouTube**: Video content integration
-- **Anthropic**: Claude AI models
-
-### Security Features
-- ✅ Secure storage in `.env.local`
-- ✅ Format validation for all providers
-- ✅ Live API testing and validation
-- ✅ Automatic `.gitignore` protection
-- ✅ Windows ACL permissions
-- ✅ Comprehensive error handling
-
-**📖 Complete Guide**: [API Security Documentation](docs/API_SECURITY_GUIDE.md)
-
----
-
-## Development
-
-### Available Scripts
+The app runs in two modes: **server mode** (API + DB, above) and **static mode**
+(pre-built JSON snapshots read by the client — no server needed).
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run test         # Run tests
-npm run lint         # Check code quality
-npm run db:studio    # Open database GUI
+# 1. Generate real data snapshots (runs the full ingestion pipeline)
+node --env-file=.env scripts/generate-static-data.mjs
+
+# 2. Build the static export (basePath = repo sub-path, e.g. /AI-News)
+bash scripts/build-static.sh /AI-News
+
+# 3. Serve locally to verify (simulates the /AI-News subpath)
+node scripts/serve-static.mjs /AI-News 8080   # → http://localhost:8080/AI-News/dashboard
 ```
 
-### Testing
+Then push `out/` to the `gh-pages` branch and enable Pages:
 
 ```bash
-# Unit tests
-npm run test
-
-# End-to-end tests
-npm run test:e2e
-
-# Test coverage
-npm run test:coverage
+cd out && touch .nojekyll && git init -b gh-pages
+git add -A && git commit -m "deploy: market signal static site"
+git remote add origin https://github.com/<you>/<repo>.git
+git push -f origin gh-pages
 ```
 
-### Mock Data Mode
+Refresh the data by re-running steps 1–2 and re-pushing `gh-pages`.
 
-The app works without external APIs using realistic mock data:
+## API (server mode)
+
+```
+GET  /api/news          # top stories (q, category, tag, limit)
+GET  /api/themes        # theme clusters + representative stories
+GET  /api/watchlist     # companies + matched stories (POST to add)
+GET  /api/digest        # daily digest
+POST /api/ingest        # manual refresh (rate-limited)
+GET  /api/cron/ingest   # scheduled ingestion (Bearer: CRON_SECRET)
+```
+
+## Architecture
+
+```
+app/MarketDashboard.js        # dashboard shell (views, login, refresh)
+components/market/*           # views + cards + badges (For You, Signal, Watchlist…)
+contexts/UserContext.jsx      # local user session + research vault
+lib/client/userStore.js       # localStorage user vault (bookmarks/watchlist/history)
+lib/clientData.js             # unified data layer (server API ↔ static JSON)
+lib/ingest.js                 # RSS fetch → normalize → dedup → persist
+lib/summarize.js              # extractive (offline) + optional OpenAI
+lib/sentiment.js              # offline lexicon sentiment
+lib/watchlist.js              # alias/keyword matching + seeding
+lib/themes.js                 # DB-backed theme clusters + velocity
+lib/signal.js                 # ranking, watchlist streams, digest
+prisma/schema.prisma          # SQLite schema
+scripts/generate-static-data.mjs  # build-time data snapshots
+scripts/build-static.sh           # static export builder
+scripts/serve-static.mjs          # local Pages-like server
+tests/unit/*.test.mjs             # accuracy unit tests (Node test runner)
+```
+
+## Testing & Verification
 
 ```bash
-# Run with mock data (no API keys needed)
-USE_MOCK_DATA=true npm run dev
+npm run test:unit                  # 22 unit tests (sentiment, dedup, watchlist, themes)
+node --env-file=.env scripts/test-ingest.mjs   # end-to-end pipeline smoke test
+npm run lint                       # ESLint (zero warnings/errors)
+npm run build                      # server-mode production build
 ```
 
----
+## Security
 
-## Deployment
+- Ingest endpoint is rate-limited (20s window); scheduled ingestion requires `CRON_SECRET`.
+- Watchlist POST validated with zod (length + type limits).
+- All text sanitized/truncated at ingest; user input rendered via React (XSS-safe).
+- Security headers set in server mode; no secrets shipped to the client in static mode.
+- `.env*` and the SQLite DB are gitignored.
 
-### Vercel (Recommended)
+## Watchlist
 
-1. Push your code to GitHub
-2. Connect your repo to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically on push
+Defaults are AI/tech players (Nvidia, OpenAI, Microsoft, Google, Meta, Amazon, Apple, Tesla).
+Edit `lib/watchlist.js` → `DEFAULT_WATCHLIST` to track your real competitors, or add them
+from the Watchlist UI (saved to your profile when signed in).
 
-### Manual Deployment
+## Out of Scope (cut for the prototype)
 
-```bash
-# Build and start
-npm run build
-npm run start
-```
-
----
-
-## API Documentation
-
-### Core Endpoints
-
-```
-GET  /api/news              # Get latest news
-GET  /api/news/[id]         # Get specific article
-POST /api/news/search       # Search articles
-POST /api/ai/summarize      # Summarize content
-GET  /api/social/comments   # Get comments
-```
-
-Visit `/api/docs` for interactive API documentation.
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Run tests: `npm run test`
-5. Commit: `git commit -m 'feat: add amazing feature'`
-6. Push: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-### Code Standards
-
-- Use TypeScript for all new code
-- Follow ESLint and Prettier rules
-- Write tests for new features
-- Use conventional commit messages
-
----
-
-## Roadmap
-
-### ✅ Completed
-- Core news aggregation
-- AI summarization
-- User authentication
-- Search functionality
-- Social features
-
-### 🔄 In Progress
-- Voice search
-- Real-time collaboration
-- Advanced AI features
-- Performance optimization
-
-### 📋 Planned
-- Mobile app
-- Multi-language support
-- Enterprise features
-- API marketplace
-
----
-
-## Support
-
-- 📖 **Documentation**: Check the `/docs` folder
-- 🐛 **Issues**: [GitHub Issues](https://github.com/ai-news-dashboard/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/ai-news-dashboard/discussions)
-- 📧 **Email**: support@ai-news-dashboard.com
-
----
+Social features, A/B experiments, mock jobs/monitoring APIs, dead overlay components, and the
+Python MLOps/DeployX suite. See `PROJECT_STATUS.md` and `NEXT_STEPS.md` for status and roadmap.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- OpenAI for AI models
-- Vercel for hosting platform
-- Next.js team for the framework
-- All contributors and community members
-
----
-
-<div align="center">
-
-**Built with ❤️ for the news community**
-
-[⭐ Star on GitHub](https://github.com/ai-news-dashboard) • [🐛 Report Bug](https://github.com/ai-news-dashboard/issues) • [💡 Request Feature](https://github.com/ai-news-dashboard/discussions)
-
-</div>
+MIT
